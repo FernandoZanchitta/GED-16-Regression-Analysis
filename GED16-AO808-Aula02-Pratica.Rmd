@@ -2,7 +2,7 @@
 Encoding: UTF-8 Unicode
 title: "GED16/AO808: Análise de Regressão"
 subtitle: 'AULA02: Prática'
-author: "Professora: Denise B. Ferrari"
+author: "Daniel Caixeta, Davi Xie, Fernando Zanchitta, João Marcos de Morais"
 date: "1o. semestre/2021" # <`r Sys.Date()`>
 output:
   html_document:
@@ -71,7 +71,47 @@ summary(auto)
 #para utilizar os nomes das variáveis diretamente
 attach(auto)
 
+#boxplot e histograma com linha de densidade estimada da variável de resposta
+boxplot(LengthStay, horizontal = TRUE)
 
+hist(LengthStay, freq = FALSE, breaks = "FD", main = "")
+lines(density(LengthStay), col="blue", lwd=3)
+
+#matriz de gráficos de dispersão
+plot(auto[, -c(1,8,9)])
+
+#carregar biblioteca para fazer matriz de correlação
+library(corrplot)
+
+res <- cor(auto[, -c(1,8,9)])
+round(res,2)
+
+corrplot(res, method = "circle", order = "hclust", sig.level = 0.01, insig = "blank")
+
+#A matriz obtida sugere correlação entre algumas variáveis, cujos diagramas de dispersão serão exibidos a seguir.
+library(car)
+
+
+scatterplot(LengthStay ~ DailyCensus|MedSchool, data = auto)
+
+scatterplot(LengthStay ~ InfectRisk|MedSchool, data = auto)
+
+scatterplot(LengthStay ~ Facilities|MedSchool, data = auto)
+
+#analisando como a variável de resposta (LengthStay) depende das outras variáveis
+
+#comparando a variável de resposta com outras variáveis
+
+boxplot(LengthStay ~ InfectRisk, horizontal = TRUE)
+
+boxplot(LengthStay ~ Facilities, horizontal = TRUE)
+
+
+#Diagrama de dispersão condicional para cada região
+scatterplot(LengthStay ~ CultRatio|Region, data = auto)
+scatterplot(LengthStay ~ XrayRatio|Region, data = auto)
+scatterplot(LengthStay ~ Facilities|Region, data = auto)
+scatterplot(LengthStay ~ InfectRisk|Region, data = auto)
 
 
 
@@ -80,7 +120,8 @@ attach(auto)
 
 
 ```{r}
-#COMPLETE A ANÁLISE
+
+
 
 #Construção de nova base de dados
 
@@ -125,25 +166,137 @@ abline(xr_rls$coef, col=2, lwd=3)
 anova(ir_rls)[1,"Mean Sq"]
 anova(fa_rls)[1,"Mean Sq"]
 anova(xr_rls)[1,"Mean Sq"]
-# Com isso concluimos que a variavel explicativa que produz menor variabilidade entorno da reta de regressão é a Facilities.
 
-#R^2
-# INSERIR VALORES DE R^2 
-#sumi<- summary(ir_rls) 
-#sumfa<-summary(fa_rls)
-#sumxr<-summary(xr_rls)
-#Concluimos que nenhuma variavél possui contribuição satisfatória para explicar o LengthStay, entretanto a com melhor coeficiente de determinação é o InfectRisk
 
 ```
+Com isso, concluimos que a variavel explicativa que produz menor variabilidade entorno da reta de regressão é a Facilities.
+
+
+Analisando os valores de R^2, nenhuma variavél possui contribuição satisfatória para explicar o LengthStay, entretanto a com melhor coeficiente de determinação é o InfectRisk.
 
 ```{r}
 data_rls <- data.frame(LengthStay = LengthStay, InfectRisk = InfectRisk, Region = Region)
 summary(data_rls)
 attach(data_rls)
-other <- data_rls[data_rls$Region == 1, data_rls$Region == 2,data_rls$Region == 3, data_rls$Region == 4]
-auto_rls <-lm(LengthStay ~ InfectRisk, data = other)
-auto_rls
+datareg1 <- subset(data_rls, Region == 1)
+datareg2 <- subset(data_rls, Region == 2)
+datareg3 <- subset(data_rls, Region == 3)
+datareg4 <- subset(data_rls, Region == 4)
+
+auto_rls1 <-lm(datareg1$LengthStay ~ datareg1$InfectRisk)
+auto_rls2 <-lm(datareg2$LengthStay ~ datareg2$InfectRisk)
+auto_rls3 <-lm(datareg3$LengthStay ~ datareg3$InfectRisk)
+auto_rls4 <-lm(datareg4$LengthStay ~ datareg4$InfectRisk)
+plot(LengthStay ~ InfectRisk,  xlim = c(0,8), ylim = c(6,20) )
+legend("topleft", legend = c("Região 1","Região 2", "Região 3", "Região 4"), col = c("red", "blue", "green", "yellow"), lty = 1, cex = 0.8)
+abline(auto_rls1, col="red", lwd=3)
+abline(auto_rls2, col="blue", lwd=3)
+abline(auto_rls3, col="green", lwd=3)
+abline(auto_rls4, col="yellow", lwd=3)
+
 ```
+
+
+Vamos separar os gráficos em 4, para poder fazer uma análise mais precisa.
+```{r}
+plot(datareg1$LengthStay ~ datareg1$InfectRisk, xlim = c(0,8), ylim = c(6,20), xlab = "InfectRisk", ylab = "LengthStay")
+legend("topleft", legend = c("Região 1"))
+abline(auto_rls1, col="red", lwd=3)
+
+plot(datareg2$LengthStay ~ datareg2$InfectRisk, xlim = c(0,8), ylim = c(6,20), xlab = "InfectRisk", ylab = "LengthStay" )
+legend("topleft", legend = c("Região 2"))
+abline(auto_rls2, col="blue", lwd=3)
+
+plot(datareg3$LengthStay ~ datareg3$InfectRisk, xlim = c(0,8), ylim = c(6,20), xlab = "InfectRisk", ylab = "LengthStay" )
+legend("topleft", legend = c("Região 3"))
+abline(auto_rls3, col="green", lwd=3)
+
+plot(datareg4$LengthStay ~ datareg4$InfectRisk, xlim = c(0,8), ylim = c(6,20), xlab = "InfectRisk", ylab = "LengthStay" )
+legend("topleft", legend = c("Região 4"))
+abline(auto_rls4, col="yellow", lwd=3)
+```
+
+
+De acordo com o primeiro gráfico, as funções de regressão foram semelhantes nas regiões 2 e 3 e, nas regiões 1 e 4, foram diferentes entre si e das demais. Analisando as retas, sugere-se que o InfectRisk não tem impacto no LengthStay para a região 4, enquanto que, para a região 1, a relação é direta, visto que o aumento do InfectRisk faz crescer o valor de LengthStay; já para as regiões 2 e 3, nota-se uma possível relação, mas mais sutil que para a Região 1. Contudo, é necessário se atentar a outros fatores relevantes para garantir a qualidade da regressão e a veracidade da correlação das variáveis.Tal análise será feita a seguir. 
+
+```{r}
+anova(auto_rls1)[1,"Mean Sq"]
+anova(auto_rls2)[1,"Mean Sq"]
+anova(auto_rls3)[1,"Mean Sq"]
+anova(auto_rls4)[1,"Mean Sq"]
+
+```
+
+A variabilidade em torno das retas são diferentes para cada região. Nota-se que, para a Regiâo 4, a variabilidade é baixa, o que sustenta a hipótese de que o InfectRisk não tem impacto no LengthStay para essa Região. Devido à alta variabilidade em torno da reta da Região 1, não se pode afirma que a alta inclinação implica em alta influência do crescimento do LengthStay em função do crescimento do InfectRisk. Já para as Regiões 2 e 3, o valor do MSE foi baixo em relação ao da Região 1, o que indica melhor qualidade na regressão, entretanto, os valores, ainda assim, foram bem mais altos do que o MSE da Região 4.
+
+Faremos "summary" para cada subconjunto de dados respectivo a cada Região para conferir os valores dois coeficientes em relação aos intervalos de confiança.
+```{r}
+summary(auto_rls1)
+summary(auto_rls2)
+summary(auto_rls3)
+summary(auto_rls4)
+confint.lm(auto_rls1, level=0.95)
+confint.lm(auto_rls2, level=0.95)
+confint.lm(auto_rls3, level=0.95)
+confint.lm(auto_rls4, level=0.95)
+
+```
+
+As retas de regressão para cada região não parecem ter mesma inclinação, devido a IC's discrepantes. Podemos concluir que, em cada Região, o impacto do valor de InfectRisk é diferente sobre o valor de LengthStay.
+
+```{r}
+#criação de novos lm para que a criação dos intervalos de confiança funcione
+auto_reg1 <- lm(LengthStay ~ InfectRisk, data = datareg1)
+auto_reg2 <- lm(LengthStay ~ InfectRisk, data = datareg2)
+auto_reg3 <- lm(LengthStay ~ InfectRisk, data = datareg3)
+auto_reg4 <- lm(LengthStay ~ InfectRisk, data = datareg4)
+
+Xc1 <- data.frame(InfectRisk = 5)
+predict.lm(auto_reg1, newdata=Xc1, interval="confidence", level = 0.95)
+Xc2 <- data.frame(InfectRisk = 5)
+predict.lm(auto_reg2, newdata=Xc2, interval="confidence", level = 0.95)
+Xc3 <- data.frame(InfectRisk = 5)
+predict.lm(auto_reg3, newdata=Xc3, interval="confidence", level = 0.95)
+Xc4 <- data.frame(InfectRisk = 5)
+predict.lm(auto_reg4, newdata=Xc4, interval="confidence", level = 0.95)
+
+```
+
+Concluímos que com 95% de confiança que, com 'InfectRisk = 5', na:
+
+Região 1, o valor de LengthStay está no intervalo de  10.46114 a 12.09216 dias;
+
+Região 2, o valor de LengthStay está no intervalo de 9.571522 a 10.3812 dias;
+
+Região 3, o valor de LengthStay está no intervalo de
+9.35118 a 10.15832 dias;
+
+Região 4, o valor de LengthStay está no intervalo de 7.435514 a 8.813368 dias.
+
+
+
+```{r}
+
+predict.lm(auto_reg1, newdata = Xc1, interval = "prediction", level = 0.95)
+
+predict.lm(auto_reg2, newdata = Xc2, interval = "prediction", level = 0.95)
+
+predict.lm(auto_reg3, newdata = Xc3, interval = "prediction", level = 0.95)
+
+predict.lm(auto_reg4, newdata = Xc4, interval = "prediction", level = 0.95)
+
+```
+
+
+Concluímos que com 95% de confiança que, com 'InfectRisk = 5', na:
+
+Região 1, o LengthStay esperado para um novo hospital está eno intervalo de 6.911133 a 15.64217 dias;
+
+Região 2, o LengthStay esperado para um novo hospital está eno intervalo de 7.856747  a 12.095977 dias;
+
+Região 3, o LengthStay esperado para um novo hospital está eno intervalo de 7.745751 a 11.76375 dias;
+
+Região 4, o LengthStay esperado para um novo hospital está eno intervalo de 5.793563 a 10.45532 dias.
 
 ### Análise de Regressão
 
