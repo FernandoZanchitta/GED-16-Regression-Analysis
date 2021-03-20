@@ -1,0 +1,173 @@
+---
+Encoding: UTF-8 Unicode
+title: "GED16/AO808: Análise de Regressão"
+subtitle: 'AULA02: Prática'
+author: "Professora: Denise B. Ferrari"
+date: "1o. semestre/2021" # <`r Sys.Date()`>
+output:
+  html_document:
+    theme: sand
+    df_print: paged
+    number_sections: FALSE  
+---
+```{r include = FALSE}
+library(tidyverse)
+knitr::opts_chunk$set(eval = TRUE, echo = TRUE)
+```
+
+----
+
+### Introdução
+
+"[Infecção hospitalar](https://www.prefeitura.sp.gov.br/cidade/secretarias/saude/vigilancia_em_saude/infeccao_hospitalar/index.php?p=6445) é uma infecção adquirida após a admissão do paciente na unidade hospitalar e pode se manifestar durante a internação ou após a alta. Pela sua gravidade e aumento do tempo de internação do paciente, é causa importante de morbidade e mortalidade, caracterizando-se como problema de saúde pública."
+
+Os dados disponíveis no arquivo `data/SCENIC.txt` foram coletados pelo CDC (US Center for Disease Control), no âmbito do [Projeto SCENIC](https://doi.org/10.1093/oxfordjournals.aje.a112928). O principal objetivo do projeto era determinar se programas de vigilância e controle foram capazes de reduzir as taxas de infecção hospitalar. Os dados referem-se a uma amostra de 113 hospitais selecionados a partir de um conjunto de 338 hospitais avaliados. Cada linha do conjunto de dados contém uma identificação (1-113) e fornece informação a respeito de 11 variáveis para um único hospital. Os dados apresentados referem-se ao período de 1975-1976.
+
+As 12 variáveis são:
+
+1. `IDnumber`: 1-113 (identificação do hospital)    
+2. `LengthStay`: período de internação médio de todos os pacientes no hospital (em dias)    
+3. `Age`: idade média dos pacientes (anos)   
+4. `InfectRisk`: risco de infecção, calculado como a probabilidade média estimada de contrair infecção no hospital (em %)   
+5. `CultRatio`: razão do número de culturas realizadas pelo número de pacientes sem sintomas de infecção hospitalar, vezes 100  
+6. `XrayRatio`: razão do número de raios-X realizados pelo número de pacientes sem sintomas de pneumonia, vezes 100  
+7. `NBeds`: número médio de leitos do hospital, durante o período avaliado  
+8. `MedSchool`: afiliação a alguma Escola de Medicina (1=Sim, 2=Não)  
+9. `Region`: região geográfica (1=NE, 2=NC, 3=S, 4=W)  
+10. `DailyCensus`: número médio de pacientes no hospital por dia, durante o período avaliado  
+11. `NNurses`: número médio de enfermeiros no hospital  
+12. `Facilities`: percentual de 35 serviços providos pelo hospital
+
+Acredita-se que o período médio de internação de um paciente `LengthStay` (variável de resposta) possa ser previsto a partir do risco de infecção hospitalar, bem como outras características do hospital e de procedimentos de rotina realizados.
+
+----
+
+### Análise Exploratória de Dados
+
+Conduza a análise exploratória da massa de dados `SCENIC`, a fim de compreender suas características principais.   
+
+
+```{r}
+rm(list=ls())
+
+#Carregando os dados em uma tabela
+auto <- read.table("data/SCENIC.txt", header = FALSE)
+
+#Verificando a estrutura dos dados e atribuindo os nomes adequados às variáveis
+str(auto)
+colnames(auto) <- c("IDnumber","LengthStay","Age","InfectRisk","CultRatio","XrayRatio","NBeds","MedSchool","Region","DailyCensus","NNurses","Facilities")
+names(auto)
+
+#Summary para analisar quais variáveis terão que ser alteradas (de numéricas para categóricas, por exemplo)
+summary(auto)
+
+#codificando corretamente as variáveis necessárias e gerando um novo resumo
+auto$IDnumber <- as.factor(auto$IDnumber)
+auto$MedSchool <- as.factor(auto$MedSchool)
+auto$Region <- as.factor(auto$Region)
+
+summary(auto)
+
+#para utilizar os nomes das variáveis diretamente
+attach(auto)
+
+
+
+
+
+
+```
+
+
+```{r}
+#COMPLETE A ANÁLISE
+
+#Construção de nova base de dados
+
+data_rls <- data.frame(LengthStay = LengthStay, InfectRisk = InfectRisk,Facilities = Facilities,XrayRatio = XrayRatio )
+summary(data_rls)
+
+# Constroi modelo de regressao linear simples (rls)
+
+#Para InfectRisk
+
+ir_rls <- lm(LengthStay ~ InfectRisk, data = data_rls)
+ir_rls
+summary(ir_rls)
+anova(ir_rls)
+
+# Adiciona curva de regressao estimada no grafico de dispersao
+plot(LengthStay ~InfectRisk)
+abline(ir_rls$coef, col=2, lwd=3)
+
+#Para Facilities
+fa_rls <- lm(LengthStay ~ Facilities, data = data_rls)
+fa_rls
+summary(fa_rls)
+anova(fa_rls)
+
+# Adiciona curva de regressao estimada no grafico de dispersao
+plot(LengthStay ~Facilities)
+abline(fa_rls$coef, col=2, lwd=3)
+#Para XrayRatio
+#Para Facilities
+xr_rls <- lm(LengthStay ~ XrayRatio, data = data_rls)
+xr_rls
+summary(xr_rls)
+anova(xr_rls)
+# Adiciona curva de regressao estimada no grafico de dispersao
+plot(LengthStay ~XrayRatio)
+abline(xr_rls$coef, col=2, lwd=3)
+
+
+#MSE
+#os valores de MSE encontrados:
+anova(ir_rls)[1,"Mean Sq"]
+anova(fa_rls)[1,"Mean Sq"]
+anova(xr_rls)[1,"Mean Sq"]
+# Com isso concluimos que a variavel explicativa que produz menor variabilidade entorno da reta de regressão é a Facilities.
+
+#R^2
+# INSERIR VALORES DE R^2 
+#sumi<- summary(ir_rls) 
+#sumfa<-summary(fa_rls)
+#sumxr<-summary(xr_rls)
+#Concluimos que nenhuma variavél possui contribuição satisfatória para explicar o LengthStay, entretanto a com melhor coeficiente de determinação é o InfectRisk
+
+```
+
+```{r}
+data_rls <- data.frame(LengthStay = LengthStay, InfectRisk = InfectRisk, Region = Region)
+summary(data_rls)
+attach(data_rls)
+other <- data_rls[data_rls$Region == 1, data_rls$Region == 2,data_rls$Region == 3, data_rls$Region == 4]
+auto_rls <-lm(LengthStay ~ InfectRisk, data = other)
+auto_rls
+```
+
+### Análise de Regressão
+
+1. Assuma que um modelo de regressão linear simples é adequado para modelar a relação da variável de resposta `LengthStay` a cada uma das variáveis explicativas `InfectRisk`, `Facilities` e `XrayRatio`.  
+
+  + Construa um modelo de regressão para cada um desses pares de variáveis;  
+  + Construa gráficos de dispersão (separados) com as retas de regressão ajustadas para cada caso;  
+  + Calcule o MSE para cada modelo. Que variável explicativa produz menor variabilidade em torno da reta de regressão ajustada?  
+  + Utilizando R^2^ como critério, qual das variáveis explicativas contribui para a maior redução na variabilidade da resposta `LengthStay`?
+
+2. Para cada região geográfica, construa um modelo de regressão para a variável de resposta `LengthStay` em função de `InfectRisk`. Assuma que o modelo de 1a. ordem é adquado para modelar essas relações. Obtenha os modelos de regressão ajustados.  
+
+  + As funções de regressão estimadas são semelhantes  para as quatro regiões? Discuta.  
+  + Calcule o MSE para cada região. A variabilidade em torno da reta de regressão ajustada é semelhante para as quatro regiões?  
+  + Construa intervalos de confiança 95% para o coeficiente angular da reta de regressão para cada região. As retas de regressão para diferentes regiões parecem ter mesma inclinação? O que se pode concluir?  
+  + Construa intervalos de confiança para a resposta esperada correspondendo a `InfectRisk = 5`, para cada região. O que se pode concluir?  
+  + Construa intervalos de previsão para um novo hospital em cada região que tenha `InfectRisk = 5`. O que se pode concluir?
+
+
+
+
+
+
+
+
+
+----
