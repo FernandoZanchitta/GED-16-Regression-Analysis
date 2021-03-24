@@ -1,0 +1,588 @@
+---
+Encoding: UTF-8 Unicode
+title: "GED16/AO808: Análise de Regressão"
+subtitle: 'AULA03: Prática'
+author: "Professora: Denise B. Ferrari"
+date: "1o. semestre/2021" # <`r Sys.Date()`>
+output:
+  html_document:
+    theme: sand
+    df_print: paged
+    number_sections: FALSE  
+---
+```{r include = FALSE}
+library(tidyverse)
+knitr::opts_chunk$set(eval = TRUE, echo = TRUE)
+```
+
+----
+
+### Introdução
+
+"[Infecção hospitalar](https://www.prefeitura.sp.gov.br/cidade/secretarias/saude/vigilancia_em_saude/infeccao_hospitalar/index.php?p=6445) é uma infecção adquirida após a admissão do paciente na unidade hospitalar e pode se manifestar durante a internação ou após a alta. Pela sua gravidade e aumento do tempo de internação do paciente, é causa importante de morbidade e mortalidade, caracterizando-se como problema de saúde pública."
+
+Os dados disponíveis no arquivo `data/SCENIC.txt` foram coletados pelo CDC (US Center for Disease Control), no âmbito do [Projeto SCENIC](https://doi.org/10.1093/oxfordjournals.aje.a112928). O principal objetivo do projeto era determinar se programas de vigilância e controle foram capazes de reduzir as taxas de infecção hospitalar. Os dados referem-se a uma amostra de 113 hospitais selecionados a partir de um conjunto de 338 hospitais avaliados. Cada linha do conjunto de dados contém uma identificação (1-113) e fornece informação a respeito de 11 variáveis para um único hospital. Os dados apresentados referem-se ao período de 1975-1976.
+
+As 12 variáveis são:
+
+1. `IDnumber`: 1-113 (identificação do hospital)    
+2. `LengthStay`: período de internação médio de todos os pacientes no hospital (em dias)    
+3. `Age`: idade média dos pacientes (anos)   
+4. `InfectRisk`: risco de infecção, calculado como a probabilidade média estimada de contrair infecção no hospital (em %)   
+5. `CultRatio`: razão do número de culturas realizadas pelo número de pacientes sem sintomas de infecção hospitalar, vezes 100  
+6. `XrayRatio`: razão do número de raios-X realizados pelo número de pacientes sem sintomas de pneumonia, vezes 100  
+7. `NBeds`: número médio de leitos do hospital, durante o período avaliado  
+8. `MedSchool`: afiliação a alguma Escola de Medicina (1=Sim, 2=Não)  
+9. `Region`: região geográfica (1=NE, 2=NC, 3=S, 4=W)  
+10. `DailyCensus`: número médio de pacientes no hospital por dia, durante o período avaliado  
+11. `NNurses`: número médio de enfermeiros no hospital  
+12. `Facilities`: percentual de 35 serviços providos pelo hospital
+
+Acredita-se que o período médio de internação de um paciente `LengthStay` (variável de resposta) possa ser previsto a partir do risco de infecção hospitalar, bem como outras características do hospital e de procedimentos de rotina realizados.
+
+----
+
+### Análise Exploratória de Dados
+
+Conduza a análise exploratória da massa de dados `SCENIC`, a fim de compreender suas características principais.   
+
+
+```{r}
+rm(list=ls())
+#Carregando os dados em uma tabela
+scenic <- read.table("data/SCENIC.txt", header = FALSE)
+
+#Verificando a estrutura dos dados e atribuindo os nomes adequados às variáveis
+str(scenic)
+colnames(scenic) <- c("IDnumber","LengthStay","Age","InfectRisk","CultRatio","XrayRatio","NBeds","MedSchool","Region","DailyCensus","NNurses","Facilities")
+names(scenic)
+
+#Summary para analisar quais variáveis terão que ser alteradas (de numéricas para categóricas, por exemplo)
+summary(scenic)
+
+#codificando corretamente as variáveis necessárias e gerando um novo resumo
+scenic$IDnumber <- as.factor(scenic$IDnumber)
+scenic$MedSchool <- as.factor(scenic$MedSchool)
+scenic$Region <- as.factor(scenic$Region)
+
+summary(scenic)
+
+#para utilizar os nomes das variáveis diretamente
+attach(scenic)
+
+#boxplot e histograma com linha de densidade estimada da variável de resposta
+boxplot(LengthStay, horizontal = TRUE)
+
+hist(LengthStay, freq = FALSE, breaks = "FD", main = "")
+lines(density(LengthStay), col="blue", lwd=3)
+
+#matriz de gráficos de dispersão
+plot(scenic[, -c(1,8,9)])
+
+#carregar biblioteca para fazer matriz de correlação
+library(corrplot)
+
+res <- cor(scenic[, -c(1,8,9)])
+round(res,2)
+
+corrplot(res, method = "circle", order = "hclust", sig.level = 0.01, insig = "blank")
+
+#A matriz obtida sugere correlação entre algumas variáveis, cujos diagramas de dispersão serão exibidos a seguir.
+library(car)
+
+
+scatterplot(LengthStay ~ DailyCensus|MedSchool, data = scenic)
+
+scatterplot(LengthStay ~ InfectRisk|MedSchool, data = scenic)
+
+scatterplot(LengthStay ~ Facilities|MedSchool, data = scenic)
+
+#analisando como a variável de resposta (LengthStay) depende das outras variáveis
+
+#comparando a variável de resposta com outras variáveis
+
+boxplot(LengthStay ~ InfectRisk, horizontal = TRUE)
+
+boxplot(LengthStay ~ Facilities, horizontal = TRUE)
+
+
+#Diagrama de dispersão condicional para cada região
+scatterplot(LengthStay ~ CultRatio|Region, data = scenic)
+scatterplot(LengthStay ~ XrayRatio|Region, data = scenic)
+scatterplot(LengthStay ~ Facilities|Region, data = scenic)
+scatterplot(LengthStay ~ InfectRisk|Region, data = scenic)
+
+
+
+
+```
+
+
+```{r}
+
+
+
+#Construção de nova base de dados
+
+data_rls <- data.frame(LengthStay = LengthStay, InfectRisk = InfectRisk,Facilities = Facilities,XrayRatio = XrayRatio )
+summary(data_rls)
+
+# Constroi modelo de regressao linear simples (rls)
+
+#Para InfectRisk
+
+ir_rls <- lm(LengthStay ~ InfectRisk, data = data_rls)
+ir_rls
+summary(ir_rls)
+anova(ir_rls)
+
+# Adiciona curva de regressao estimada no grafico de dispersao
+plot(LengthStay ~InfectRisk)
+abline(ir_rls$coef, col=2, lwd=3)
+
+#Para Facilities
+fa_rls <- lm(LengthStay ~ Facilities, data = data_rls)
+fa_rls
+summary(fa_rls)
+anova(fa_rls)
+
+# Adiciona curva de regressao estimada no grafico de dispersao
+plot(LengthStay ~Facilities)
+abline(fa_rls$coef, col=2, lwd=3)
+
+#Para XrayRatio
+xr_rls <- lm(LengthStay ~ XrayRatio, data = data_rls)
+xr_rls
+summary(xr_rls)
+anova(xr_rls)
+# Adiciona curva de regressao estimada no grafico de dispersao
+plot(LengthStay ~XrayRatio)
+abline(xr_rls$coef, col=2, lwd=3)
+
+
+#MSE
+#os valores de MSE encontrados:
+anova(ir_rls)[1,"Mean Sq"]
+anova(fa_rls)[1,"Mean Sq"]
+anova(xr_rls)[1,"Mean Sq"]
+
+
+```
+Com isso, concluimos que a variavel explicativa que produz menor variabilidade entorno da reta de regressão é a Facilities.
+
+
+Analisando os valores de R^2, nenhuma variavél possui contribuição satisfatória para explicar o LengthStay, entretanto a com melhor coeficiente de determinação é o InfectRisk.
+
+```{r}
+data_rls <- data.frame(LengthStay = LengthStay, InfectRisk = InfectRisk, Region = Region)
+summary(data_rls)
+attach(data_rls)
+datareg1 <- subset(data_rls, Region == 1)
+datareg2 <- subset(data_rls, Region == 2)
+datareg3 <- subset(data_rls, Region == 3)
+datareg4 <- subset(data_rls, Region == 4)
+
+scenic_rls1 <-lm(datareg1$LengthStay ~ datareg1$InfectRisk)
+scenic_rls2 <-lm(datareg2$LengthStay ~ datareg2$InfectRisk)
+scenic_rls3 <-lm(datareg3$LengthStay ~ datareg3$InfectRisk)
+scenic_rls4 <-lm(datareg4$LengthStay ~ datareg4$InfectRisk)
+plot(LengthStay ~ InfectRisk,  xlim = c(0,8), ylim = c(6,20) )
+legend("topleft", legend = c("Região 1","Região 2", "Região 3", "Região 4"), col = c("red", "blue", "green", "yellow"), lty = 1, cex = 0.8)
+abline(scenic_rls1, col="red", lwd=3)
+abline(scenic_rls2, col="blue", lwd=3)
+abline(scenic_rls3, col="green", lwd=3)
+abline(scenic_rls4, col="yellow", lwd=3)
+
+```
+
+
+Vamos separar os gráficos em 4, para poder fazer uma análise mais precisa.
+```{r}
+plot(datareg1$LengthStay ~ datareg1$InfectRisk, xlim = c(0,8), ylim = c(6,20), xlab = "InfectRisk", ylab = "LengthStay")
+legend("topleft", legend = c("Região 1"))
+abline(scenic_rls1, col="red", lwd=3)
+
+plot(datareg2$LengthStay ~ datareg2$InfectRisk, xlim = c(0,8), ylim = c(6,20), xlab = "InfectRisk", ylab = "LengthStay" )
+legend("topleft", legend = c("Região 2"))
+abline(scenic_rls2, col="blue", lwd=3)
+
+plot(datareg3$LengthStay ~ datareg3$InfectRisk, xlim = c(0,8), ylim = c(6,20), xlab = "InfectRisk", ylab = "LengthStay" )
+legend("topleft", legend = c("Região 3"))
+abline(scenic_rls3, col="green", lwd=3)
+
+plot(datareg4$LengthStay ~ datareg4$InfectRisk, xlim = c(0,8), ylim = c(6,20), xlab = "InfectRisk", ylab = "LengthStay" )
+legend("topleft", legend = c("Região 4"))
+abline(scenic_rls4, col="yellow", lwd=3)
+```
+
+
+De acordo com o primeiro gráfico, as funções de regressão foram semelhantes nas regiões 2 e 3 e, nas regiões 1 e 4, foram diferentes entre si e das demais. Analisando as retas, sugere-se que o InfectRisk não tem impacto no LengthStay para a região 4, enquanto que, para a região 1, a relação é direta, visto que o aumento do InfectRisk faz crescer o valor de LengthStay; já para as regiões 2 e 3, nota-se uma possível relação, mas mais sutil que para a Região 1. Contudo, é necessário se atentar a outros fatores relevantes para garantir a qualidade da regressão e a veracidade da correlação das variáveis.Tal análise será feita a seguir. 
+
+```{r}
+anova(scenic_rls1)[1,"Mean Sq"]
+anova(scenic_rls2)[1,"Mean Sq"]
+anova(scenic_rls3)[1,"Mean Sq"]
+anova(scenic_rls4)[1,"Mean Sq"]
+
+```
+
+A variabilidade em torno das retas são diferentes para cada região. Nota-se que, para a Regiâo 4, a variabilidade é baixa, o que sustenta a hipótese de que o InfectRisk não tem impacto no LengthStay para essa Região. Devido à alta variabilidade em torno da reta da Região 1, não se pode afirma que a alta inclinação implica em alta influência do crescimento do LengthStay em função do crescimento do InfectRisk. Já para as Regiões 2 e 3, o valor do MSE foi baixo em relação ao da Região 1, o que indica melhor qualidade na regressão, entretanto, os valores, ainda assim, foram bem mais altos do que o MSE da Região 4.
+
+Faremos "summary" para cada subconjunto de dados respectivo a cada Região para conferir os valores dois coeficientes em relação aos intervalos de confiança.
+```{r}
+summary(scenic_rls1)
+summary(scenic_rls2)
+summary(scenic_rls3)
+summary(scenic_rls4)
+confint.lm(scenic_rls1, level=0.95)
+confint.lm(scenic_rls2, level=0.95)
+confint.lm(scenic_rls3, level=0.95)
+confint.lm(scenic_rls4, level=0.95)
+
+```
+
+As retas de regressão para cada região não parecem ter mesma inclinação, devido a IC's discrepantes. Podemos concluir que, em cada Região, o impacto do valor de InfectRisk é diferente sobre o valor de LengthStay.
+
+```{r}
+#criação de novos lm para que a criação dos intervalos de confiança funcione
+scenic_reg1 <- lm(LengthStay ~ InfectRisk, data = datareg1)
+scenic_reg2 <- lm(LengthStay ~ InfectRisk, data = datareg2)
+scenic_reg3 <- lm(LengthStay ~ InfectRisk, data = datareg3)
+scenic_reg4 <- lm(LengthStay ~ InfectRisk, data = datareg4)
+
+Xc1 <- data.frame(InfectRisk = 5)
+predict.lm(scenic_reg1, newdata=Xc1, interval="confidence", level = 0.95)
+Xc2 <- data.frame(InfectRisk = 5)
+predict.lm(scenic_reg2, newdata=Xc2, interval="confidence", level = 0.95)
+Xc3 <- data.frame(InfectRisk = 5)
+predict.lm(scenic_reg3, newdata=Xc3, interval="confidence", level = 0.95)
+Xc4 <- data.frame(InfectRisk = 5)
+predict.lm(scenic_reg4, newdata=Xc4, interval="confidence", level = 0.95)
+
+```
+
+Concluímos que com 95% de confiança que, com 'InfectRisk = 5', na:
+
+Região 1, o valor de LengthStay está no intervalo de  10.46114 a 12.09216 dias;
+
+Região 2, o valor de LengthStay está no intervalo de 9.571522 a 10.3812 dias;
+
+Região 3, o valor de LengthStay está no intervalo de
+9.35118 a 10.15832 dias;
+
+Região 4, o valor de LengthStay está no intervalo de 7.435514 a 8.813368 dias.
+
+
+
+```{r}
+
+predict.lm(scenic_reg1, newdata = Xc1, interval = "prediction", level = 0.95)
+
+predict.lm(scenic_reg2, newdata = Xc2, interval = "prediction", level = 0.95)
+
+predict.lm(scenic_reg3, newdata = Xc3, interval = "prediction", level = 0.95)
+
+predict.lm(scenic_reg4, newdata = Xc4, interval = "prediction", level = 0.95)
+
+```
+
+
+Concluímos que com 95% de confiança que, com 'InfectRisk = 5', na:
+
+Região 1, o LengthStay esperado para um novo hospital está eno intervalo de 6.911133 a 15.64217 dias;
+
+Região 2, o LengthStay esperado para um novo hospital está eno intervalo de 7.856747  a 12.095977 dias;
+
+Região 3, o LengthStay esperado para um novo hospital está eno intervalo de 7.745751 a 11.76375 dias;
+
+Região 4, o LengthStay esperado para um novo hospital está eno intervalo de 5.793563 a 10.45532 dias.
+
+### Diagnóstico
+
+Diagnóstico através da análise dos resíduos para InfectRisk
+
+```{r}
+par(mfcol = c(2,2), mar=c(4,4,3,1))
+
+#Gráficos dos resíduos:
+
+#para dados originais: resid x lengthstay_orig; resid x infectrisk
+resid_rls_orig <-  ir_rls$res
+lengthstay_orig <- ir_rls$fit
+
+plot(resid_rls_orig ~ lengthstay_orig, main = "dados originais", ylab="resíduos")
+abline(h = 0, col = "red", lty = "dashed")
+plot(resid_rls_orig ~ InfectRisk, ylab ="resíduos")
+abline(h = 0, col = "red", lty = "dashed")
+
+
+```
+
+Diagnóstico através da análise dos resíduos para Facilities
+
+```{r}
+par(mfcol = c(2,2), mar=c(4,4,3,1))
+
+#Gráficos dos resíduos:
+
+#para dados originais: resid x lengthstay_orig; resid x facilities
+resid_rls_orig <-  fa_rls$res
+lengthstay_orig <- fa_rls$fit
+
+plot(resid_rls_orig ~ lengthstay_orig, main = "dados originais", ylab="resíduos")
+abline(h = 0, col = "red", lty = "dashed")
+plot(resid_rls_orig ~ Facilities, ylab ="resíduos")
+abline(h = 0, col = "red", lty = "dashed")
+```
+
+Diagnóstico através da análise dos resíduos para XrayRatio
+
+```{r}
+par(mfcol = c(2,2), mar=c(4,4,3,1))
+
+#Gráficos dos resíduos:
+
+#para dados originais: resid x lengthstay_orig; resid x xrayratio
+resid_rls_orig <-  xr_rls$res
+lengthstay_orig <- xr_rls$fit
+
+plot(resid_rls_orig ~ lengthstay_orig, main = "dados originais", ylab="resíduos")
+abline(h = 0, col = "red", lty = "dashed")
+plot(resid_rls_orig ~ XrayRatio, ylab ="resíduos")
+abline(h = 0, col = "red", lty = "dashed")
+```
+
+Note que os gráficos de resíduos para os dados originais versus variável de resposta ajustada apresentam padrão linear nas três variáveis explicativas(InfectRisk, Facilities e XrayRatio).Tal fato sugere que não é necessário fazer uma transformação dos dados e consideraremos, portanto, o modelo original.
+
+
+Vamos fazer os gráficos do módulo dos resíduos para cada uma das três variáveis explicativas para permitir analisar efeitos com mais facilidade.
+
+  InfectRisk:     
+  
+```{r}
+par(mfcol = c(2,2), mar=c(4,4,3,1))
+
+#Gráficos dos resíduos:
+
+#para dados originais: resid x lengthstay_orig; resid x infectrisk
+resid_rls_orig <-  ir_rls$res
+lengthstay_orig <- ir_rls$fit
+
+plot(abs(resid_rls_orig) ~ lengthstay_orig, main = "dados originais", ylab="|resíduos|")
+abline(h = 0, col = "red", lty = "dashed")
+plot(abs(resid_rls_orig) ~ InfectRisk, ylab ="|resíduos|")
+abline(h = 0, col = "red", lty = "dashed")
+
+```
+
+  Facilities:
+```{r}
+par(mfcol = c(2,2), mar=c(4,4,3,1))
+
+#Gráficos dos resíduos:
+
+#para dados originais: resid x lengthstay_orig; resid x facilities
+resid_rls_orig <-  fa_rls$res
+lengthstay_orig <- fa_rls$fit
+
+plot(abs(resid_rls_orig) ~ lengthstay_orig, main = "dados originais", ylab="|resíduos|")
+abline(h = 0, col = "red", lty = "dashed")
+plot(abs(resid_rls_orig) ~ Facilities, ylab ="|resíduos|")
+abline(h = 0, col = "red", lty = "dashed")
+```
+ 
+ XrayRatio: 
+ 
+```{r}
+par(mfcol = c(2,2), mar=c(4,4,3,1))
+
+#Gráficos dos resíduos:
+
+#para dados originais: resid x lengthstay_orig; resid x xrayratio
+resid_rls_orig <-  xr_rls$res
+lengthstay_orig <- xr_rls$fit
+
+plot(abs(resid_rls_orig) ~ lengthstay_orig, main = "dados originais", ylab="|resíduos|")
+abline(h = 0, col = "red", lty = "dashed")
+plot(abs(resid_rls_orig) ~ XrayRatio, ylab ="|resíduos|")
+abline(h = 0, col = "red", lty = "dashed")
+```
+ 
+Os gráficos para as três variáveis sugerem que a variância está aproximadamente constante.Para verificar formalmente, vamos fazer o Teste de Breusch-Pagan com hipótese nula de que a variância é constante; a hipótese alternativa é de que a variância não se mantém constante para todas as observações.
+
+# Teste de Homoscedasticidade de Breusch-Pagan
+# Ho: sigma^2  = cte
+# Ha: sigma^2 != cte
+
+```{r}
+library(lmtest)
+# InfectRisk
+
+bptest(ir_rls)
+
+#Facilities
+
+bptest(fa_rls)
+
+#XrayRatio
+
+bptest(xr_rls)
+
+```
+
+Os p-valores implicam que, para as variáveis InfectRisk e XrayRatio, a hipótese nula é descartada e, para a variável Facilities, a hipótese nula é aceita, sob um fator de risco de 5%. Logo, conclui-se que para InfectRisk e XrayRatio, sugere-se que a variância não é constante. Já para Facilities, é provável que seja constante.
+
+
+#Outliers
+Para identificar possíveis outliers, vamos analisar os resíduos padronizados (os resíduos semi-studentizados produzem praticamente os mesmos gráficos):
+
+  InfectRisk:
+```{r}
+par(mfrow=c(1,2))
+
+# Gráficos para os resíduos padronizados
+resid_rls_pad <- rstandard(ir_rls)
+
+plot(resid_rls_pad ~ lengthstay_orig, ylim=c(-5,5),
+     ylab="resíduos padronizados")
+abline(h = c(-4, -3, 0, 3, 4) , col = "red", lty = "dashed")
+
+```
+  
+  Facilities:
+```{r}
+par(mfrow=c(1,2))
+
+# Gráficos para os resíduos padronizados
+resid_rls_pad <- rstandard(fa_rls)
+
+plot(resid_rls_pad ~ lengthstay_orig, ylim=c(-5,5),
+     ylab="resíduos padronizados")
+abline(h = c(-4, -3, 0, 3, 4) , col = "red", lty = "dashed")
+```
+  
+  XrayRatio:
+
+```{r}
+par(mfrow=c(1,2))
+
+# Gráficos para os resíduos padronizados
+resid_rls_pad <- rstandard(xr_rls)
+
+plot(resid_rls_pad ~ lengthstay_orig, ylim=c(-5,5),
+     ylab="resíduos padronizados")
+abline(h = c(-4, -3, 0, 3, 4) , col = "red", lty = "dashed")
+```
+
+Há algumas observações extremas (possíveis outliers), mas elas não devem ser eliminadas neste ponto da análise. Antes disso, é necessário avaliar o efeito da inclusão de outras variáveis explicativas no modelo.
+
+#Independência
+
+Assumimos que os erros não são correlacionados. Não é possível identificar padrões aparentes sugestivos de existência de correlação entre os erros. O procedimento formal para avaliar esta hipótese é o Teste de Durbin-Watson (a hipótese nula é de que a correlação é nula e a hipótese alternativa automática é de que a correlação é positiva, mas nós realizaremos o teste bi-caudal):
+
+
+```{r}
+# Teste de Durbin-Watson para correlação nula dos erros
+# Ho: corr  = 0
+# Ha: corr != 0
+
+library(lmtest)
+
+#InfectRisk
+dwtest(ir_rls, alternative = "two.sided")
+
+#Facilities
+dwtest(fa_rls, alternative = "two.sided")
+
+#XrayRatio
+dwtest(xr_rls, alternative = "two.sided")
+```
+
+Portanto, devido aos valores-p encontrados, aceita-se a hipótese nula para todas as três variáveis, ou seja, sugere-se que os erros não são correlacionados.
+
+#Normalidade
+
+Podemos avaliar a normalidade através de métodos gráficos e testes de hipóteses. O procedimento gráfico se baseia na análise de histogramas, boxplots e gráficos de quantis para os resíduos (padronizados).
+
+```{r}
+par(mfrow=c(1,2))
+
+# Histograma
+hist(resid_rls_pad)
+
+# Gráfico de quantis
+qqnorm(resid_rls_pad)
+qqline(resid_rls_pad, lty="dashed")
+```
+
+
+#Fazer comentário do histograma e do qqplot
+
+A hipótese de normalidade pode ser formalmente testada através do teste de Shapiro-Wilk. A hipótese nula é de que os resíduos são normalmente distribuídos, versus a hipótese alternativa de que os resíduos não seguem a distribuição normal:
+
+```{r}
+# Teste de Normalidade de Shapiro-Wilk
+# Ho: normal
+# Ha: não-normal
+
+shapiro.test(resid_rls_pad)
+```
+
+O valor-p do teste nos leva a rejeitar a hipótese nula e concluir que os erros não são normalmente distribuídos. Como sabemos, a violação da hipótese de normalidade não é das mais graves, contudo, sugere-se a necessidade de outras medidas corretivas. Logo, faremos a transformação Box-Cox
+
+  InfectRisk:
+```{r}
+# Transformação Box-Cox
+
+library(MASS)
+bcir <- boxcox(lm(LengthStay ~ InfectRisk), lambda = seq(-2, 2, by = 0.1), plotit = TRUE)
+(lambdair <- bc$x[which.max(bc$y)])
+```
+
+  Facilities:
+```{r}
+bcfa <- boxcox(lm(LengthStay ~ Facilities), lambda = seq(-2, 2, by = 0.1), plotit = TRUE)
+(lambdafa <- bc$x[which.max(bc$y)])
+```
+
+  XrayRatio:
+```{r}
+bcxr <- boxcox(lm(LengthStay ~ XrayRatio), lambda = seq(-2, 2, by = 0.1), plotit = TRUE)
+(lambdaxr <- bc$x[which.max(bc$y)])
+```
+
+
+
+X[-c(47,)]
+
+
+1. Assuma que um modelo de regressão linear simples é adequado para modelar a relação da variável de resposta `LengthStay` a cada uma das variáveis explicativas `InfectRisk`, `Facilities` e `XrayRatio`.  
+
+  + Construa um modelo de regressão para cada um desses pares de variáveis;  
+  + Construa gráficos de dispersão (separados) com as retas de regressão ajustadas para cada caso;  
+  + Calcule o MSE para cada modelo. Que variável explicativa produz menor variabilidade em torno da reta de regressão ajustada?  
+  + Utilizando R^2^ como critério, qual das variáveis explicativas contribui para a maior redução na variabilidade da resposta `LengthStay`?
+
+2. Para cada região geográfica, construa um modelo de regressão para a variável de resposta `LengthStay` em função de `InfectRisk`. Assuma que o modelo de 1a. ordem é adquado para modelar essas relações. Obtenha os modelos de regressão ajustados.  
+
+  + As funções de regressão estimadas são semelhantes  para as quatro regiões? Discuta.  
+  + Calcule o MSE para cada região. A variabilidade em torno da reta de regressão ajustada é semelhante para as quatro regiões?  
+  + Construa intervalos de confiança 95% para o coeficiente angular da reta de regressão para cada região. As retas de regressão para diferentes regiões parecem ter mesma inclinação? O que se pode concluir?  
+  + Construa intervalos de confiança para a resposta esperada correspondendo a `InfectRisk = 5`, para cada região. O que se pode concluir?  
+  + Construa intervalos de previsão para um novo hospital em cada região que tenha `InfectRisk = 5`. O que se pode concluir?
+
+
+
+### Diagnóstico
+
+1. Para cada um dos três modelos de regressão ajustados no item (1) da seção anterior, realize o diagnóstico através da análise dos resíduos e apresente um resumo de suas conclusões. O modelo de regressão linear simples clássico é adequado a alguma das situações investigadas?
+
+2. Ajuste um modelo de regressão linear simples para a variável `LengthStay` como função de `InfectRisk` após excluir as observações 47 (X = 6.5 e Y = 19.56) e 112 (X = 5.9 e Y = 17.94). Obtenha intervalos de previsão de 95% de confiança para novas observações que apresentam valores da variável explicativa iguais a 6.5 e 5.9. As observações eliminadas encontram-se nos limites dos intervalos de previsão obtidos? Discuta o significado dos resultados obtidos.
+
+3. Para os modelos considerando cada região geográfica separadamente no item (2) da seção anterior, realize o diagnóstico através da análise dos resíduos. Todas as regiões aparentam ter mesma variância dos erros? Que conclusões é possível obter a partir da análise?
+
+
+
+
+
+----
