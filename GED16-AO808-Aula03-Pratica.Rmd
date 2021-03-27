@@ -528,32 +528,173 @@ A hipótese de normalidade pode ser formalmente testada através do teste de Sha
 shapiro.test(resid_rls_pad)
 ```
 
-O valor-p do teste nos leva a rejeitar a hipótese nula e concluir que os erros não são normalmente distribuídos. Como sabemos, a violação da hipótese de normalidade não é das mais graves, contudo, sugere-se a necessidade de outras medidas corretivas. Logo, faremos a transformação Box-Cox
+O valor-p do teste nos leva a rejeitar a hipótese nula e concluir que os erros não são normalmente distribuídos. Como sabemos, a violação da hipótese de normalidade não é das mais graves, contudo, sugere-se a necessidade de outras medidas corretivas. 
 
-  InfectRisk:
+Faremos agora a tranformação Box-Cox nessa base de dados para testar a linearidade do modelo.
+
+## Transformação Box-Cox 
 ```{r}
-# Transformação Box-Cox
-
 library(MASS)
+ #InfectRIsk
 bcir <- boxcox(lm(LengthStay ~ InfectRisk), lambda = seq(-2, 2, by = 0.1), plotit = TRUE)
-(lambdair <- bc$x[which.max(bc$y)])
-```
-
-  Facilities:
-```{r}
+(lambdair <- bcir$x[which.max(bcir$y)])
+#Facilities
 bcfa <- boxcox(lm(LengthStay ~ Facilities), lambda = seq(-2, 2, by = 0.1), plotit = TRUE)
-(lambdafa <- bc$x[which.max(bc$y)])
-```
-
-  XrayRatio:
-```{r}
+(lambdafa <- bcfa$x[which.max(bcfa$y)])
+#XrayRatio  
 bcxr <- boxcox(lm(LengthStay ~ XrayRatio), lambda = seq(-2, 2, by = 0.1), plotit = TRUE)
-(lambdaxr <- bc$x[which.max(bc$y)])
+(lambdaxr <- bcxr$x[which.max(bcxr$y)])
+
 ```
 
 
 
-X[-c(47,)]
+InfectRisk:
+O valor de $\lambda$ que maximiza a função de verossimilhança (ou melhor, o logaritmo dessa função) é próximo de -1.1, o que indica que a transformação $\frac{1}{Y^{1.1}}$ deve ser aplicada. Sendo assim, replicaremos o procedimento realizado para as variáveis transformadas:
+```{r}
+#Transforma da variável de resposta
+
+LengthStay_bcir <- 1/(LengthStay^(1.1))
+
+# Constrói nova base de dados
+data_rls_bcir <- data.frame(InfectRisk = InfectRisk, LengthStay_bcir = LengthStay_bcir )
+
+# Ajusta modelo de regressão linear simples aos dados transformados
+scenic_rls_bcir <- lm(LengthStay_bcir ~ InfectRisk, data = data_rls_bcir)
+
+# Gera resumo do modelo de regressão ajustado
+summary(scenic_rls_bcir)
+```
+
+Modelo ajustado:
+
+$\frac{1}{LengthStay^{1.1}} = -0.00636*InfectRisk + 0.113375$
+
+```{r}
+# Adiciona curva de regressão estimada ao gráfico de dispersão
+plot(data_rls_bcir)
+abline(scenic_rls_bcir$coef, col = 2, lwd = 3)
+```
+
+Precisamos realizar o diagnóstico do novo modelo:
+
+```{r}
+par(mfrow = c(2,2), mar=c(4,4,3,1))
+# Produz gráficos dos resíduos
+plot(scenic_rls_bcir)
+```
+
+
+Facilities:
+
+O valor de $\lambda$ que maximiza a função de verossimilhança (ou melhor, o logaritmo dessa função) é próximo de -1.3, o que indica que a transformação $\frac{1}{Y^{1.3}}$ deve ser aplicada. Sendo assim, replicaremos o procedimento realizado para as variáveis transformadas:
+```{r}
+#Transforma da variável de resposta
+
+LengthStay_bcfa <- 1/(LengthStay^(1.3))
+
+# Constrói nova base de dados
+data_rls_bcfa <- data.frame(Facilities = Facilities, LengthStay_bcfa = LengthStay_bcfa)
+
+# Ajusta modelo de regressão linear simples aos dados transformados
+scenic_rls_bcfa <- lm(LengthStay_bcfa ~ Facilities, data = data_rls_bcfa)
+
+# Gera resumo do modelo de regressão ajustado
+summary(scenic_rls_bcfa)
+```
+
+Modelo ajustado:
+
+$\frac{1}{LengthStay^{1.3}} = -0.0003*Facilities + 0.068$
+
+```{r}
+# Adiciona curva de regressão estimada ao gráfico de dispersão
+plot(data_rls_bcfa)
+abline(scenic_rls_bcfa$coef, col = 2, lwd = 3)
+```
+
+Precisamos realizar o diagnóstico do novo modelo:
+
+```{r}
+par(mfrow = c(2,2), mar=c(4,4,3,1))
+# Produz gráficos dos resíduos
+plot(scenic_rls_bcfa)
+```
+
+
+
+XrayRatio:
+O valor de $\lambda$ que maximiza a função de verossimilhança (ou melhor, o logaritmo dessa função) é próximo de -1.2, o que indica que a transformação $\frac{1}{Y^{1.2}}$ deve ser aplicada. Sendo assim, replicaremos o procedimento realizado para as variáveis transformadas:
+
+```{r}
+#Transforma da variável de resposta
+
+LengthStay_bcxr <- 1/(LengthStay^(1.2))
+
+# Constrói nova base de dados
+data_rls_bcxr <- data.frame(XrayRatio = XrayRatio, LengthStay_bcxr = LengthStay_bcxr)
+
+# Ajusta modelo de regressão linear simples aos dados transformados
+scenic_rls_bcxr <- lm(LengthStay_bcxr ~ XrayRatio, data = data_rls_bcxr)
+
+# Gera resumo do modelo de regressão ajustado
+summary(scenic_rls_bcxr)
+```
+
+Modelo ajustado:
+
+$\frac{1}{LengthStay^{1.2}} = -0.00026*XrayRatio + 0.09$
+
+```{r}
+# Adiciona curva de regressão estimada ao gráfico de dispersão
+plot(data_rls_bcxr)
+abline(scenic_rls_bcxr$coef, col = 2, lwd = 3)
+```
+
+
+Precisamos realizar o diagnóstico do novo modelo:
+
+```{r}
+par(mfrow = c(2,2), mar=c(4,4,3,1))
+# Produz gráficos dos resíduos
+plot(scenic_rls_bcxr)
+```
+
+##Criação da nova base de dados para remover outliers
+```{r}
+
+newdata_rls <- data_rls[-c(47,112), ]
+newir_rls <- lm(LengthStay ~ InfectRisk, data = newdata_rls)  
+newlengthstay_orig <- newir_rls$fit  
+```
+```{r}
+par(mfrow=c(1,2))
+
+# Gráficos para os resíduos padronizados
+newresid_rls_pad <- rstandard(newir_rls)
+
+plot(newresid_rls_pad ~ newlengthstay_orig, ylim=c(-5,5),
+     ylab="resíduos padronizados")
+abline(h = c(-4, -3, 0, 3, 4) , col = "red", lty = "dashed")
+```
+
+Construiremos intervalos de previsão de 95% de confiança para novas observações que apresentam valores da variável explicativa iguais a 6.5 e 5.9.
+
+```{r}
+Xi1 <- data.frame(InfectRisk = 6.5)
+predict.lm(newir_rls, newdata = Xi1, interval="confidence", level = 0.95)
+Xi2 <- data.frame(InfectRisk = 5.9)
+predict.lm(newir_rls, newdata = Xi2, interval="confidence", level = 0.95)
+```
+
+Concluimos que, com 95% de confiança, para InfectRisk = 6.5 o valor de LengthStay está entre 10.36399 e 11.26118 dias. Já para InfectRisk = 5.9, com 95% de confiança que LengthStay está entre 10.08424 e 10.80923 dias. Portanto, as observações removidas não estão no intervalo de confiança encontrado, pois eram de LengthStay = 19.56 e 17.94 dias. Logo, foi coerente a remoção de ambas observações.
+
+
+
+Contudo, como a amostra é pequena, a presença de dois possíveis outliers pode ser muito impactante. Portanto, faremos a remoção desses pontos antes de fazer medidas corretivas.
+
+
+
 
 
 1. Assuma que um modelo de regressão linear simples é adequado para modelar a relação da variável de resposta `LengthStay` a cada uma das variáveis explicativas `InfectRisk`, `Facilities` e `XrayRatio`.  
