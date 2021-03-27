@@ -441,9 +441,9 @@ Para identificar possíveis outliers, vamos analisar os resíduos padronizados (
 par(mfrow=c(1,2))
 
 # Gráficos para os resíduos padronizados
-resid_rls_pad <- rstandard(ir_rls)
+resid_rls_pad_ir <- rstandard(ir_rls)
 
-plot(resid_rls_pad ~ lengthstay_orig, ylim=c(-5,5),
+plot(resid_rls_pad_ir ~ lengthstay_orig, ylim=c(-5,5),
      ylab="resíduos padronizados")
 abline(h = c(-4, -3, 0, 3, 4) , col = "red", lty = "dashed")
 
@@ -454,9 +454,9 @@ abline(h = c(-4, -3, 0, 3, 4) , col = "red", lty = "dashed")
 par(mfrow=c(1,2))
 
 # Gráficos para os resíduos padronizados
-resid_rls_pad <- rstandard(fa_rls)
+resid_rls_pad_f <- rstandard(fa_rls)
 
-plot(resid_rls_pad ~ lengthstay_orig, ylim=c(-5,5),
+plot(resid_rls_pad_f ~ lengthstay_orig, ylim=c(-5,5),
      ylab="resíduos padronizados")
 abline(h = c(-4, -3, 0, 3, 4) , col = "red", lty = "dashed")
 ```
@@ -467,9 +467,9 @@ abline(h = c(-4, -3, 0, 3, 4) , col = "red", lty = "dashed")
 par(mfrow=c(1,2))
 
 # Gráficos para os resíduos padronizados
-resid_rls_pad <- rstandard(xr_rls)
+resid_rls_pad_xr <- rstandard(xr_rls)
 
-plot(resid_rls_pad ~ lengthstay_orig, ylim=c(-5,5),
+plot(resid_rls_pad_xr ~ lengthstay_orig, ylim=c(-5,5),
      ylab="resíduos padronizados")
 abline(h = c(-4, -3, 0, 3, 4) , col = "red", lty = "dashed")
 ```
@@ -504,28 +504,57 @@ Portanto, devido aos valores-p encontrados, aceita-se a hipótese nula para toda
 
 Podemos avaliar a normalidade através de métodos gráficos e testes de hipóteses. O procedimento gráfico se baseia na análise de histogramas, boxplots e gráficos de quantis para os resíduos (padronizados).
 
+InfectRisk:
+
 ```{r}
 par(mfrow=c(1,2))
 
 # Histograma
-hist(resid_rls_pad)
+hist(resid_rls_pad_ir)
 
 # Gráfico de quantis
-qqnorm(resid_rls_pad)
-qqline(resid_rls_pad, lty="dashed")
+qqnorm(resid_rls_pad_ir)
+qqline(resid_rls_pad_ir, lty="dashed")
 ```
 
+Facilities:
+
+```{r}
+par(mfrow=c(1,2))
+
+# Histograma
+hist(resid_rls_pad_f)
+
+# Gráfico de quantis
+qqnorm(resid_rls_pad_f)
+qqline(resid_rls_pad_f, lty="dashed")
+```
+
+XrayRatio:
+
+```{r}
+par(mfrow=c(1,2))
+
+# Histograma
+hist(resid_rls_pad_xr)
+
+# Gráfico de quantis
+qqnorm(resid_rls_pad_xr)
+qqline(resid_rls_pad_xr, lty="dashed")
+```
 
 #Fazer comentário do histograma e do qqplot
 
-A hipótese de normalidade pode ser formalmente testada através do teste de Shapiro-Wilk. A hipótese nula é de que os resíduos são normalmente distribuídos, versus a hipótese alternativa de que os resíduos não seguem a distribuição normal:
+Visualmente, o histograma não aparenta ter um caráter normal de distribuição. A hipótese de normalidade pode ser formalmente testada através do teste de Shapiro-Wilk. A hipótese nula é de que os resíduos são normalmente distribuídos, versus a hipótese alternativa de que os resíduos não seguem a distribuição normal:
 
 ```{r}
 # Teste de Normalidade de Shapiro-Wilk
 # Ho: normal
 # Ha: não-normal
 
-shapiro.test(resid_rls_pad)
+shapiro.test(resid_rls_pad_ir)
+shapiro.test(resid_rls_pad_f)
+shapiro.test(resid_rls_pad_xr)
 ```
 
 O valor-p do teste nos leva a rejeitar a hipótese nula e concluir que os erros não são normalmente distribuídos. Como sabemos, a violação da hipótese de normalidade não é das mais graves, contudo, sugere-se a necessidade de outras medidas corretivas. 
@@ -660,6 +689,8 @@ par(mfrow = c(2,2), mar=c(4,4,3,1))
 plot(scenic_rls_bcxr)
 ```
 
+Após fazer a transformação, podemos observar pelo gráfico dos resíduos que esta não apresenta nenhuma curvatura, indicando, assim, uma relação linear, melhorando o modelo.
+
 ##Criação da nova base de dados para remover outliers
 ```{r}
 
@@ -690,12 +721,84 @@ predict.lm(newir_rls, newdata = Xi2, interval="confidence", level = 0.95)
 Concluimos que, com 95% de confiança, para InfectRisk = 6.5 o valor de LengthStay está entre 10.36399 e 11.26118 dias. Já para InfectRisk = 5.9, com 95% de confiança que LengthStay está entre 10.08424 e 10.80923 dias. Portanto, as observações removidas não estão no intervalo de confiança encontrado, pois eram de LengthStay = 19.56 e 17.94 dias. Logo, foi coerente a remoção de ambas observações.
 
 
+## Diagnóstico por Região
 
-Contudo, como a amostra é pequena, a presença de dois possíveis outliers pode ser muito impactante. Portanto, faremos a remoção desses pontos antes de fazer medidas corretivas.
+```{r}
+## Região 1
+
+par(mfrow=c(1,1))
+
+resid_rls_orig_reg1 <- scenic_rls1$res
+lengthstay_orig_reg1 <- scenic_rls1$fit
+plot(abs(resid_rls_orig_reg1) ~ lengthstay_orig_reg1, main = "Região 1", ylab="|resíduos|", xlim = c(7.5, 15), ylim = c(0, 7))
+abline(h = 0, col = "red", lty="dashed")
+
+```
 
 
+```{r}
+## Região 2
+par(mfrow=c(1,1))
+
+resid_rls_orig_reg2 <- scenic_rls2$res
+lengthstay_orig_reg2 <- scenic_rls2$fit
+plot(abs(resid_rls_orig_reg2) ~ lengthstay_orig_reg2, main = "Região 2", ylab="|resíduos|", xlim = c(7.5, 15), ylim = c(0, 7))
+abline(h = 0, col = "red", lty="dashed")
+
+```
 
 
+```{r}
+## Região 3
+par(mfrow=c(1,1))
+
+resid_rls_orig_reg3 <- scenic_rls3$res
+lengthstay_orig_reg3 <- scenic_rls3$fit
+plot(abs(resid_rls_orig_reg3) ~ lengthstay_orig_reg3, main = "Região 3", ylab="|resíduos|", xlim = c(7.5, 15), ylim = c(0, 7))
+abline(h = 0, col = "red", lty="dashed")
+```
+
+
+```{r}
+## Região 4
+par(mfrow=c(1,1))
+
+resid_rls_orig_reg4 <- scenic_rls4$res
+lengthstay_orig_reg4 <- scenic_rls4$fit
+plot(abs(resid_rls_orig_reg4) ~ lengthstay_orig_reg4, main = "Região 4", ylab="|resíduos|", xlim = c(7.5, 15), ylim = c(0, 7))
+abline(h = 0, col = "red", lty="dashed")
+```
+
+
+## Teste de Homoscedasticidade de Breusch-Pagan para cada Região:
+```{r}
+## Ho: sigma^2 = cte
+## Ha: sigma^2 != cte
+```
+ 
+```{r}
+## Região 1:
+bptest(scenic_rls1)
+```
+
+```{r}
+## Região 2:
+bptest(scenic_rls2)
+```
+
+```{r}
+## Região 3:
+bptest(scenic_rls3)
+```
+
+```{r}
+## Região 4:
+bptest(scenic_rls4)
+```
+
+Os p-valores implicam que, para a Região 1, a hipótese nula é descartada e, para as Regiões 2, 3 e 4, a hipótese nula é aceita, sob um fator de risco de 5%. Logo, conclui-se que para a Região 1, sugere-se que a variância não é constante. Já para as Regiões 2, 3 e 4, é provável que seja constante. Visualmente, pelos gráficos do módulo dos resíduos pelos valores de InfectRisk, percebemos que apenas a Região 1 sugere heterocedasticidade, e o contrário para as demais, o que corrobora com o resultado do teste realizado.
+
+### Análise
 
 1. Assuma que um modelo de regressão linear simples é adequado para modelar a relação da variável de resposta `LengthStay` a cada uma das variáveis explicativas `InfectRisk`, `Facilities` e `XrayRatio`.  
 
