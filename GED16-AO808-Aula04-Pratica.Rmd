@@ -1,0 +1,384 @@
+---
+Encoding: UTF-8 Unicode
+title: "GED16/AO808: Análise de Regressão"
+subtitle: 'AULA04: Prática'
+author: "Professora: Denise B. Ferrari"
+date: "1o. semestre/2021" # <`r Sys.Date()`>
+output:
+  html_document:
+    theme: sand
+    df_print: paged
+    number_sections: FALSE  
+---
+```{r include = FALSE}
+library(tidyverse)
+knitr::opts_chunk$set(eval = TRUE, echo = TRUE)
+```
+
+----
+
+### Introdução
+
+"[Infecção hospitalar](https://www.prefeitura.sp.gov.br/cidade/secretarias/saude/vigilancia_em_saude/infeccao_hospitalar/index.php?p=6445) é uma infecção adquirida após a admissão do paciente na unidade hospitalar e pode se manifestar durante a internação ou após a alta. Pela sua gravidade e aumento do tempo de internação do paciente, é causa importante de morbidade e mortalidade, caracterizando-se como problema de saúde pública."
+
+Os dados disponíveis no arquivo `data/SCENIC.txt` foram coletados pelo CDC (US Center for Disease Control), no âmbito do [Projeto SCENIC](https://doi.org/10.1093/oxfordjournals.aje.a112928). O principal objetivo do projeto era determinar se programas de vigilância e controle foram capazes de reduzir as taxas de infecção hospitalar. Os dados referem-se a uma amostra de 113 hospitais selecionados a partir de um conjunto de 338 hospitais avaliados. Cada linha do conjunto de dados contém uma identificação (1-113) e fornece informação a respeito de 11 variáveis para um único hospital. Os dados apresentados referem-se ao período de 1975-1976.
+
+As 12 variáveis são:
+
+1. `IDnumber`: 1-113 (identificação do hospital)    
+2. `LengthStay`: período de internação médio de todos os pacientes no hospital (em dias)    
+3. `Age`: idade média dos pacientes (anos)   
+4. `InfectRisk`: risco de infecção, calculado como a probabilidade média estimada de contrair infecção no hospital (em %)   
+5. `CultRatio`: razão do número de culturas realizadas pelo número de pacientes sem sintomas de infecção hospitalar, vezes 100  
+6. `XrayRatio`: razão do número de raios-X realizados pelo número de pacientes sem sintomas de pneumonia, vezes 100  
+7. `NBeds`: número médio de leitos do hospital, durante o período avaliado  
+8. `MedSchool`: afiliação a alguma Escola de Medicina (1=Sim, 2=Não)  
+9. `Region`: região geográfica (1=NE, 2=NC, 3=S, 4=W)  
+10. `DailyCensus`: número médio de pacientes no hospital por dia, durante o período avaliado  
+11. `NNurses`: número médio de enfermeiros no hospital  
+12. `Facilities`: percentual de 35 serviços providos pelo hospital
+
+Acredita-se que o período médio de internação de um paciente `LengthStay` (variável de resposta) possa ser previsto a partir do risco de infecção hospitalar, bem como outras características do hospital e de procedimentos de rotina realizados.
+
+----
+
+### Análise Exploratória de Dados
+
+Conduza a análise exploratória da massa de dados `SCENIC`, a fim de compreender suas características principais.   
+
+
+```{r}
+rm(list=ls())
+scenic <- read.table("data/SCENIC.txt", header = FALSE)
+```
+
+
+```
+>>> COMPLETE A ANÁLISE
+```
+
+
+
+### PARTE 1: Regressão Linear Simples
+
+1. Assuma que um modelo de regressão linear simples é adequado para modelar a relação da variável de resposta `LengthStay` a cada uma das variáveis explicativas `InfectRisk`, `Facilities` e `XrayRatio`.  
+
+  + Construa um modelo de regressão para cada um desses pares de variáveis;  
+  + Construa gráficos de dispersão (separados) com as retas de regressão ajustadas para cada caso;  
+  + Calcule o MSE para cada modelo. Que variável explicativa produz menor variabilidade em torno da reta de regressão ajustada?  
+  + Utilizando R^2^ como critério, qual das variáveis explicativas contribui para a maior redução na variabilidade da resposta `LengthStay`?
+
+2. Para cada região geográfica, construa um modelo de regressão para a variável de resposta `LengthStay` em função de `InfectRisk`. Assuma que o modelo de 1a. ordem é adquado para modelar essas relações. Obtenha os modelos de regressão ajustados.  
+
+  + As funções de regressão estimadas são semelhantes  para as quatro regiões? Discuta.  
+  + Calcule o MSE para cada região. A variabilidade em torno da reta de regressão ajustada é semelhante para as quatro regiões?  
+  + Construa intervalos de confiança 95% para o coeficiente angular da reta de regressão para cada região. As retas de regressão para diferentes regiões parecem ter mesma inclinação? O que se pode concluir?  
+  + Construa intervalos de confiança para a resposta esperada correspondendo a `InfectRisk = 5`, para cada região. O que se pode concluir?  
+  + Construa intervalos de previsão para um novo hospital em cada região que tenha `InfectRisk = 5`. O que se pode concluir?
+
+
+
+### Diagnóstico
+
+1. Para cada um dos três modelos de regressão ajustados no item (1) da seção anterior, realize o diagnóstico através da análise dos resíduos e apresente um resumo de suas conclusões. O modelo de regressão linear simples clássico é adequado a alguma das situações investigadas?
+
+2. Ajuste um modelo de regressão linear simples para a variável `LengthStay` como função de `InfectRisk` após excluir as observações 47 (X = 6.5 e Y = 19.56) e 112 (X = 5.9 e Y = 17.94). Obtenha intervalos de previsão de 95% de confiança para novas observações que apresentam valores da variável explicativa iguais a 6.5 e 5.9. As observações eliminadas encontram-se nos limites dos intervalos de previsão obtidos? Discuta o significado dos resultados obtidos.
+
+3. Para os modelos considerando cada região geográfica separadamente no item (2) da seção anterior, realize o diagnóstico através da análise dos resíduos. Todas as regiões aparentam ter mesma variância dos erros? Que conclusões é possível obter a partir da análise?
+
+
+### PARTE 2: Regressão Linear Múltipla
+
+Dois modelos foram propostos para prever o período médio de internação de um paciente (`LengthStay`):
+
+**Modelo I**: utiliza como variáveis explicativas `Age`, `InfectRisk` e `Facilities`
+
+**Modelo II**: utiliza como variáveis explicativas `NBeds`, `InfectRisk` e `Facilities`
+
+1. Construa a matriz de gráficos de dispersão, bem como a matriz de correlação para cada modelo proposto. Interprete os resultados obtidos.
+
+2. Para cada modelo, ajuste um modelo de regressão de 1a. ordem com as três variáveis explicativas consideradas. Discuta os resultados obtidos.
+
+3. Realize o diagnóstico dos modelos. É possível identificar um modelo que seja mais adequado aos dados?
+
+4. Para cada região geográfica, construa um modelo de regressão de 1a. ordem para `InfectRisk` como função das variáveis `Age`, `CultRatio`, `DailyCensus` e `Facilities`.   
+   + Comente sobre os resultados obtidos para os modelos ajustados.    
+   + As funções de regressão estimadas são semelhantes nas quatro regiões? Discuta.  
+   + Analise os valores de MSE e $R^2_aj$ para cada modelo Essas medidas são semelhantes para as quatro regiões? Discuta.   
+   + Realize o diagnóstico dos modelos construídos. Interprete os gráficos e os resultados obtidos.
+   
+### Modelo 1:
+#### 1. 
+```{r}
+rm(list = ls())
+
+
+scenic <- read.table("data/SCENIC.txt")
+colnames(scenic) <- c("IDnumber","LengthStay","Age","InfectRisk","CultRatio","XrayRatio","NBeds","MedSchool","Region","DailyCensus","NNurses","Facilities")
+
+attach(scenic)
+summary(scenic)
+data_model1 <- data.frame(Age = Age, Facilities = Facilities, InfectRisk = InfectRisk, LengthStay = LengthStay)
+
+
+cor(data_model1)
+plot(data_model1)
+
+
+```
+
+Visualmente, há uma sugestão de correlação linear entre LengthStay e InfectRisk, bem como com Facilities também. Já podemos mapear um possivel problema futuro, ao observarmos uma possível relação linear entre Facilities e InfectRisk.
+
+Analisando a matriz de correlação percebemos um coeficiente baixo para Age e LengthStay frente aos demais,todavia, para efeito de modelo dentro do problema proposto, já podemos continuar com a hipotese inicial.
+
+#### 2. Ajuste do Modelo
+```{r}
+rlm.m1 <- lm(LengthStay ~  Age + InfectRisk + Facilities, data = data_model1)
+rlm.m1
+summary(rlm.m1)
+
+
+
+```
+
+A análise indica que os coeficientes são estatisticamente diferentes de zero, com exceção do Incercept, porém o valor nulo para as variáveis explicativas não se encontra dentro da nossa base de dados, logo, indicam que existe uma associação estatisticamente linear entre a variável de resposta e as variáveis explicativas.
+
+
+Ao incluir as três variáveis do modelo, observamos que a variação total de LengthStay se reduz em cerca de 35% o que indica que o modelo não explica tão bem o fenômeno apenas com essas variáveis. Como R2, R2adj indicam valores semelhantes, não há overfiting aparente, contudo o valor baixo de ambos sugere que o modelo não engloba as todas as variáveis necessárias.
+
+#### 3. Diagnóstico
+
+Analisaremos se há padrão sistemático nos resíduos do modelo 1:
+```{r}
+# Grafico: resid x resposta ajustada (yhat)
+plot(fitted(rlm.m1), resid(rlm.m1))
+abline(h=0, lty="dashed")
+# Grafico: |resid| x resposta ajustada (yhat)
+plot(fitted(rlm.m1), abs(resid(rlm.m1)))
+
+# Grafico: resid x var. explic. Age
+plot(Age, resid(rlm.m1))
+abline(h=0, lty="dashed")
+
+```
+
+Estes gráficos não revelam nenhum desvio sistemático da resposta linear. A variância dos erros permanece aproximadamente constante para todos os valores de resposta ajustada.
+
+```{r}
+# Grafico: resid x var. explic. InfectRisk
+plot(InfectRisk, resid(rlm.m1))
+abline(h=0, lty="dashed")
+```
+
+Este gráfico não revela nenhum desvio sistemático da resposta linear. A variância dos erros permanece aproximadamente constante para todos os valores de resposta ajustada.
+
+```{r}
+# Grafico: resid x var. explic. Facilities
+plot(Facilities, resid(rlm.m1))
+abline(h=0, lty="dashed")
+```
+
+Este gráfico não revela nenhum desvio sistemático da resposta linear. A variância dos erros permanece aproximadamente constante para todos os valores de resposta ajustada.
+
+Assim, vamos avaliar a possibilidade de existirem efeitos de interação entre as var. explicativas, que possam ter sido omitidos do modelo:
+
+```{r}
+# Grafico comparando Age e InfectRisk
+plot(Age*InfectRisk, resid(rlm.m1))
+abline(h=0, lty="dashed")
+
+# Grafico comparando Age e Facilities
+plot(Age*Facilities, resid(rlm.m1))
+abline(h=0, lty="dashed")
+
+# Grafico comparando InfectRisk e Facilities
+plot(InfectRisk*Facilities, resid(rlm.m1))
+abline(h=0, lty="dashed")
+```
+
+Não podemos perceber nenhum padrão sistemático nos gráficos. Se este fosse o caso, sugeriria a presença de efeitos de interação, de forma que um modelo do tipo
+
+E[Y] = beta0 + beta1 * X1 + beta2 * X2 + beta3 * X3 + beta4 * X3 * X2 + beta5 * X3 * X1 + beta6 * X1 * X2
+
+poderia ser mais adequado.
+
+```{r}
+# Grafico de probabilidade (ou de quantis) para os resíduos padronizados
+resid.std <- (resid(rlm.m1))/sd(resid(rlm.m1))
+qqnorm(resid.std)  
+qqline(resid.std, lty="dashed") # adiciona reta que passa pelo 1o. e 3o. quartis
+```
+
+O gráfico de quantis não indica desvios importantes da normalidade, porém apresenta apenas 3 possíveis outliers. Neste caso, não faz sentido gerar graficos temporais, já que os dados foram obtidos em “cross-section”.
+
+### Modelo 2
+#### 1.
+```{r}
+data_model2 <- data.frame(NBeds = NBeds, Facilities = Facilities, InfectRisk = InfectRisk, LengthStay = LengthStay)
+cor(data_model2)
+plot(data_model2)
+```
+Visualmente, há uma sugestão de correlação linear entre LengthStay e InfectRisk, bem como com Facilities também. Já podemos mapear um possivel problema futuro, ao observarmos uma possível relação linear entre Facilities e InfectRisk.
+
+Analisando a matriz de correlação percebemos temos coeficientes baixos para as três variáveis(por volta de 0.4),apesar de não serem tão elevados quanto gostaríamos, iremos prosseguir com o modelo.
+
+
+#### 2. Ajuste de Modelo
+```{r}
+rlm.m2 <- lm(LengthStay ~  NBeds + InfectRisk + Facilities, data = data_model2)
+rlm.m2
+summary(rlm.m2)
+```
+
+A estatística F do modelo sugere que pelo menos uma das variáveis é significativa para o modelo empregado. As estatísticas para cada coeficiente indicam que apenas a variável Facilities não aparenta ser significativa no modelo empregado. Como os valores de R2 e R2 ajustado estão próximos, não há variáveis em excesso no modelo contudo os valores baixos para ambos esses coeficientes indicam que as variáveis propostas não capturam completamente a variação da variável de resposta.
+
+#### 3. Diagnóstico
+
+Analisaremos se há padrão sistemático nos resíduos para os 2 modelos:
+```{r}
+# Grafico: resid x resposta ajustada (yhat)
+plot(fitted(rlm.m2), resid(rlm.m2))
+abline(h=0, lty="dashed")
+# Grafico: |resid| x resposta ajustada (yhat)
+plot(fitted(rlm.m2), abs(resid(rlm.m2)))
+
+# Grafico: resid x var. explic. NBeds
+plot(NBeds, resid(rlm.m2))
+abline(h=0, lty="dashed")
+
+```
+
+Estes gráficos não revelam nenhum desvio sistemático da resposta linear. A variância dos erros permanece aproximadamente constante para todos os valores de resposta ajustada.
+
+```{r}
+# Grafico: resid x var. explic. InfectRisk
+plot(InfectRisk, resid(rlm.m2))
+abline(h=0, lty="dashed")
+```
+
+Estes gráficos não revelam nenhum desvio sistemático da resposta linear. A variância dos erros permanece aproximadamente constante para todos os valores de resposta ajustada.
+
+```{r}
+# Grafico: resid x var. explic. Facilities
+plot(Facilities, resid(rlm.m2))
+abline(h=0, lty="dashed")
+```
+
+Estes gráficos não revelam nenhum desvio sistemático da resposta linear. A variância dos erros permanece aproximadamente constante para todos os valores de resposta ajustada.
+
+Assim, vamos avaliar a possibilidade de existirem efeitos de interação entre as var. explicativas, que possam ter sido omitidos do modelo:
+
+```{r}
+# Grafico comparando NBeds e InfectRisk
+plot(NBeds*InfectRisk, resid(rlm.m2))
+abline(h=0, lty="dashed")
+
+# Grafico comparando NBeds e Facilities
+plot(NBeds*Facilities, resid(rlm.m2))
+abline(h=0, lty="dashed")
+
+# Grafico comparando InfectRisk e Facilities
+plot(InfectRisk*Facilities, resid(rlm.m2))
+abline(h=0, lty="dashed")
+```
+
+Não podemos perceber nenhum padrão sistemático nos gráficos. Se este fosse o caso, sugeriria a presença de efeitos de interação, de forma que um modelo do tipo
+
+E[Y] = beta0 + beta1 * X1 + beta2 * X2 + beta3 * X3 + beta4 * X3 * X2 + beta5 * X3 * X1 + beta6 * X1 * X2
+
+poderia ser mais adequado.
+
+```{r}
+# Grafico de probabilidade (ou de quantis) para os resíduos padronizados
+resid.std <- (resid(rlm.m2))/sd(resid(rlm.m2))
+qqnorm(resid.std)  
+qqline(resid.std, lty="dashed") # adiciona reta que passa pelo 1o. e 3o. quartis
+```
+
+O gráfico de quantis não indica desvios importantes da normalidade, porém apresenta apenas 2 possíveis outliers. Neste caso, não faz sentido gerar graficos temporais, já que os dados foram obtidos em “cross-section”.
+
+#### 4.
+
+```{r}
+rm(list=ls())
+scenic <- read.table("data/SCENIC.txt", header = FALSE)
+```
+
+```{r}
+rm(list = ls())
+
+
+scenic <- read.table("data/SCENIC.txt")
+colnames(scenic) <- c("IDnumber","LengthStay","Age","InfectRisk","CultRatio","XrayRatio","NBeds","MedSchool","Region","DailyCensus","NNurses","Facilities")
+
+attach(scenic)
+
+data_region <- data.frame(Age = Age, CultRatio = CultRatio, DailyCensus = DailyCensus, Facilities = Facilities, Region = Region, InfectRisk = InfectRisk)
+attach(data_region)
+```
+
+##### Região 1:
+
+```{r}
+data_region1 <- subset(data_region, Region == 1)
+
+rlm.m1 <- lm(InfectRisk ~  Age + CultRatio + DailyCensus + Facilities, data = data_region1)
+rlm.m1
+summary(rlm.m1)
+
+```
+
+Aqui, para a região 1, a var. dependente é InfectRisk e as var.explicativas são Age, CultRatio, DailyCensus, Facilities. Neste modelo não admitimos interações entre as var. ou termos de ordem superior.
+
+Assim, o modelo pode ser descrito pela equação:
+
+Yhat = -3.349576 + 0.116954 * Age + 0.058240 * CultRatio + 0.001508 * DailyCensus + 0.006613 * Facilities (eq.plano)
+
+##### Região 2:
+
+```{r}
+data_region2 <- subset(data_region, Region == 2)
+
+rlm.m2 <- lm(InfectRisk ~  Age + CultRatio + DailyCensus + Facilities, data = data_region2)
+rlm.m2
+summary(rlm.m2)
+
+```
+
+Aqui, para a região 2, a var. dependente é InfectRisk e as var.explicativas são Age, CultRatio, DailyCensus, Facilities. Neste modelo não admitimos interações entre as var. ou termos de ordem superior.
+
+Assim, o modelo pode ser descrito pela equação:
+
+Yhat = 2.291536 + 0.004742 * Age + 0.058030 * CultRatio + 0.001172 * DailyCensus + 0.015018 * Facilities (eq.plano)
+
+##### Região 3:
+
+```{r}
+data_region3 <- subset(data_region, Region == 3)
+
+rlm.m3 <- lm(InfectRisk ~  Age + CultRatio + DailyCensus + Facilities, data = data_region3)
+rlm.m3
+summary(rlm.m3)
+```
+
+Aqui, para a região 3, a var. dependente é InfectRisk e as var.explicativas são Age, CultRatio, DailyCensus, Facilities. Neste modelo não admitimos interações entre as var. ou termos de ordem superior.
+
+Assim, o modelo pode ser descrito pela equação:
+
+Yhat = -0.143858 + 0.030848 * Age + 0.102281 * CultRatio + 0.004114 * DailyCensus + 0.008039 * Facilities (eq.plano)
+
+##### Região 4:
+
+```{r}
+data_region4 <- subset(data_region, Region == 4)
+
+rlm.m4 <- lm(InfectRisk ~  Age + CultRatio + DailyCensus + Facilities, data = data_region4)
+rlm.m4
+summary(rlm.m4)
+```
+
+Aqui, para a região 4, a var. dependente é InfectRisk e as var.explicativas são Age, CultRatio, DailyCensus, Facilities. Neste modelo não admitimos interações entre as var. ou termos de ordem superior.
+
+Assim, o modelo pode ser descrito pela equação:
+
+Yhat = 1.566549 + 0.035241 * Age + 0.040328 * CultRatio - 0.000664 * DailyCensus + 0.012792 * Facilities (eq.plano)
