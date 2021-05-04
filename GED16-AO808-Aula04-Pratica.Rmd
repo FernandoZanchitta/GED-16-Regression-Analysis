@@ -382,3 +382,39 @@ Aqui, para a região 4, a var. dependente é InfectRisk e as var.explicativas s�
 Assim, o modelo pode ser descrito pela equação:
 
 Yhat = 1.566549 + 0.035241 * Age + 0.040328 * CultRatio - 0.000664 * DailyCensus + 0.012792 * Facilities (eq.plano)
+
+Analisando os coeficientes para cada variável, podemos analisar a dependência de cada variável explicativa em cada modelo.
+
+Para a variável explicativa Age, percebe-se que temos um coeficiente maior para Região 1, implicando, assim, numa maior influência desse coeficiente na variável de resposta. Em contrapartida, na Região 2, tal coeficiente é menor, implicando numa menor influência. Já para as regiões 3 e 4, os coeficientes estão intermediários.
+
+Para a variável explicativa CultRatio, temos um coeficiente maior para a Região 3, ou seja, implicando numa maior influência de tal coeficiente na variável de resposta da região em questão. Para as outras regiões, o coefiente é semelhante.
+
+Para a variável explicativa DailyCensus, assim como em CultRatio, temos um coeficiente maior para a Região 3. E menor na região 4. Analisando os coeficientes dessa variável para todas as regiões, pode-se notar que são menores que os coeficientes de outras variáveis, indicando uma baixa influência dessa variável explicativa para a variável de resposta para todas as regiões analisadas.
+
+Para a variável explicativa Facilities, temos um maior coeficiente para as regiões 2 e 4, e uma menor influência de tal coeficiente na variável de resposta para a região 1.
+
+### Análise do MSE e Raj²
+
+#### Região 1
+
+MSE = 1.022, Raj-squared = 0.3676
+
+#### Região 2
+
+MSE = 1.212, Raj-squared = 0.3243
+
+#### Região 3
+
+MSE = 0.937, Raj-squared = 0.56
+
+#### Região 4
+
+MSE = 0.954, Raj-squared = -0.2415
+
+O valor de MSE da região 2 foi a maior e o da região 3 e 4 foram os menores. Quanto menor o valor de MSE, melhor a qualidade do estimador e melhor a aproximação do modelo com o valor real.
+
+O valor de Raj-squared da região 4 é negativo e é o menor das regiões, enquanto que o da região 3 é a maior. Quanto maior o valor de Raj-squared, melhor é explicado o modelo pelas variáveis explicativas, indicando que o melhor modelo é a região 3. Por outro lado, a região 4 possui variáveis explicativas insignificantes, o que poderia ser corrigido aumentando a amostragem.
+
+Apesar do MSE baixo da região 4, indicando uma boa aproximação do modelo aos dados obtidos, o valor de Raj-squared indica que a variável de resposta, para essa região, não é bem explicada para o conjunto de variáveis explicativas. E dessa forma, podemos concluir que não basta analisar apenas um fator isoladamente, como MSE, para poder tirar conclusões.
+
+Por outro lado, o valor baixo do MSE e o valor alto de Raj-squared na região 3 indica que o modelo é bem explicado pelas variáveis explicativas.
