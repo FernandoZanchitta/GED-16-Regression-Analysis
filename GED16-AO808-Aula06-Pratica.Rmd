@@ -1,0 +1,336 @@
+---
+Encoding: UTF-8 Unicode
+title: "GED16/AO808: Análise de Regressão"
+subtitle: 'AULA06: Prática'
+author: "Professora: Denise B. Ferrari"
+date: "1o. semestre/2021" # <`r Sys.Date()`>
+output:
+  html_document:
+    theme: sand
+    df_print: paged
+    number_sections: FALSE  
+---
+```{r include = FALSE}
+library(tidyverse)
+knitr::opts_chunk$set(eval = TRUE, echo = TRUE)
+```
+
+----
+
+### Introdução
+
+"[Infecção hospitalar](https://www.prefeitura.sp.gov.br/cidade/secretarias/saude/vigilancia_em_saude/infeccao_hospitalar/index.php?p=6445) é uma infecção adquirida após a admissão do paciente na unidade hospitalar e pode se manifestar durante a internação ou após a alta. Pela sua gravidade e aumento do tempo de internação do paciente, é causa importante de morbidade e mortalidade, caracterizando-se como problema de saúde pública."
+
+Os dados disponíveis no arquivo `data/SCENIC.txt` foram coletados pelo CDC (US Center for Disease Control), no âmbito do [Projeto SCENIC](https://doi.org/10.1093/oxfordjournals.aje.a112928). O principal objetivo do projeto era determinar se programas de vigilância e controle foram capazes de reduzir as taxas de infecção hospitalar. Os dados referem-se a uma amostra de 113 hospitais selecionados a partir de um conjunto de 338 hospitais avaliados. Cada linha do conjunto de dados contém uma identificação (1-113) e fornece informação a respeito de 11 variáveis para um único hospital. Os dados apresentados referem-se ao período de 1975-1976.
+
+As 12 variáveis são:
+
+1. `IDnumber`: 1-113 (identificação do hospital)    
+2. `LengthStay`: período de internação médio de todos os pacientes no hospital (em dias)    
+3. `Age`: idade média dos pacientes (anos)   
+4. `InfectRisk`: risco de infecção, calculado como a probabilidade média estimada de contrair infecção no hospital (em %)   
+5. `CultRatio`: razão do número de culturas realizadas pelo número de pacientes sem sintomas de infecção hospitalar, vezes 100  
+6. `XrayRatio`: razão do número de raios-X realizados pelo número de pacientes sem sintomas de pneumonia, vezes 100  
+7. `NBeds`: número médio de leitos do hospital, durante o período avaliado  
+8. `MedSchool`: afiliação a alguma Escola de Medicina (1=Sim, 2=Não)  
+9. `Region`: região geográfica (1=NE, 2=NC, 3=S, 4=W)  
+10. `DailyCensus`: número médio de pacientes no hospital por dia, durante o período avaliado  
+11. `NNurses`: número médio de enfermeiros no hospital  
+12. `Facilities`: percentual de 35 serviços providos pelo hospital
+
+Acredita-se que o período médio de internação de um paciente `LengthStay` (variável de resposta) possa ser previsto a partir do risco de infecção hospitalar, bem como outras características do hospital e de procedimentos de rotina realizados.
+
+----
+
+### Análise Exploratória de Dados
+
+Conduza a análise exploratória da massa de dados `SCENIC`, a fim de compreender suas características principais.   
+
+
+```{r}
+rm(list=ls())
+scenic <- read.table("data/SCENIC.txt", header = FALSE)
+```
+
+
+### PARTE 1: Regressão Linear Simples
+
+1. Assuma que um modelo de regressão linear simples é adequado para modelar a relação da variável de resposta `LengthStay` a cada uma das variáveis explicativas `InfectRisk`, `Facilities` e `XrayRatio`.  
+
+  + Construa um modelo de regressão para cada um desses pares de variáveis;  
+  + Construa gráficos de dispersão (separados) com as retas de regressão ajustadas para cada caso;  
+  + Calcule o MSE para cada modelo. Que variável explicativa produz menor variabilidade em torno da reta de regressão ajustada?  
+  + Utilizando R^2^ como critério, qual das variáveis explicativas contribui para a maior redução na variabilidade da resposta `LengthStay`?
+
+2. Para cada região geográfica, construa um modelo de regressão para a variável de resposta `LengthStay` em função de `InfectRisk`. Assuma que o modelo de 1a. ordem é adquado para modelar essas relações. Obtenha os modelos de regressão ajustados.  
+
+  + As funções de regressão estimadas são semelhantes  para as quatro regiões? Discuta.  
+  + Calcule o MSE para cada região. A variabilidade em torno da reta de regressão ajustada é semelhante para as quatro regiões?  
+  + Construa intervalos de confiança 95% para o coeficiente angular da reta de regressão para cada região. As retas de regressão para diferentes regiões parecem ter mesma inclinação? O que se pode concluir?  
+  + Construa intervalos de confiança para a resposta esperada correspondendo a `InfectRisk = 5`, para cada região. O que se pode concluir?  
+  + Construa intervalos de previsão para um novo hospital em cada região que tenha `InfectRisk = 5`. O que se pode concluir?
+  
+
+### Diagnóstico
+
+1. Para cada um dos três modelos de regressão ajustados no item (1) da seção anterior, realize o diagnóstico através da análise dos resíduos e apresente um resumo de suas conclusões. O modelo de regressão linear simples clássico é adequado a alguma das situações investigadas?
+
+2. Ajuste um modelo de regressão linear simples para a variável `LengthStay` como função de `InfectRisk` após excluir as observações 47 (X = 6.5 e Y = 19.56) e 112 (X = 5.9 e Y = 17.94). Obtenha intervalos de previsão de 95% de confiança para novas observações que apresentam valores da variável explicativa iguais a 6.5 e 5.9. As observações eliminadas encontram-se nos limites dos intervalos de previsão obtidos? Discuta o significado dos resultados obtidos.
+
+3. Para os modelos considerando cada região geográfica separadamente no item (2) da seção anterior, realize o diagnóstico através da análise dos resíduos. Todas as regiões aparentam ter mesma variância dos erros? Que conclusões é possível obter a partir da análise?
+
+
+### PARTE 2: Regressão Linear Múltipla
+
+Dois modelos foram propostos para prever o período médio de internação de um paciente (`LengthStay`):
+
+**Modelo I**: utiliza como variáveis explicativas `Age`, `InfectRisk` e `Facilities`
+
+**Modelo II**: utiliza como variáveis explicativas `NBeds`, `InfectRisk` e `Facilities`
+
+1. Construa a matriz de gráficos de dispersão, bem como a matriz de correlação para cada modelo proposto. Interprete os resultados obtidos.
+
+2. Para cada modelo, ajuste um modelo de regressão de 1a. ordem com as três variáveis explicativas consideradas. Discuta os resultados obtidos.
+
+3. Realize o diagnóstico dos modelos. É possível identificar um modelo que seja mais adequado aos dados?
+
+4. Para cada região geográfica, construa um modelo de regressão de 1a. ordem para `InfectRisk` como função das variáveis `Age`, `CultRatio`, `DailyCensus` e `Facilities`.   
+   + Comente sobre os resultados obtidos para os modelos ajustados.    
+   + As funções de regressão estimadas são semelhantes nas quatro regiões? Discuta.  
+   + Analise os valores de MSE e $R^2_aj$ para cada modelo Essas medidas são semelhantes para as quatro regiões? Discuta.   
+   + Realize o diagnóstico dos modelos construídos. Interprete os gráficos e os resultados obtidos.
+   
+   
+### Análise de Somas de Quadrados Extras
+
+Decidiu-se prever o período médio de internação de um paciente (`LengthStay`), em função das variáveis `Age` e `InfectRisk`. 
+A questão agora é se a inclusão de outra variável explicativa adicional no modelo seria útil e, em caso positivo, qual delas seria mais útil. Foram consideradas as seguintes variáveis extras:  `CultRatio`, `DailyCensus`, `NNurses` e `Facilities`.
+
+Assuma que um modelo de regressão linear múltipla de 1a. ordem é adequado. 
+
+1. Analise as somas de quadrados extras e discuta qual das quatro variáveis explicativas candidatas é a melhor inclusão.
+
+2. Conduza um teste utilizando a estatística F parcial (com nível de significância 5%) para decidir se a variável escolhida no item anterior é útil no modelo de regressão que já contém `Age` e `InfectRisk`. Descreva as alternativas, a regra de decisão e a conclusão do teste. A estatística F parcial correspondente para as outras três candidatas teria valor tão elevado quando a da variável escolhida? Discuta.
+
+
+### Multicolinearidade
+
+Um modelo de regressão de 1a. ordem para `LengthStay` em função de `Age`, `XrayRatio`, `DailyCensus` é construído com base nas observações 57-113. Com base na matriz de gráficos de dispersão, matriz de correlação e VIFs, analise se há indícios de problemas sérios de multicolinearidade. Justifique sua análise.
+
+
+### PARTE 3: Construção do Modelo
+
+Ajuste um modelo quadrático relacionando as variáveis `NNurses` (resposta) e `Facilities` (variável explicativa).
+
+1. Através de análise dos resíduos analise se o modelo de 2a. ordem construído parece se ajustar bem aos dados.
+
+2. Analise o coeficiente de determinação ajustado para o modelo de 2a. ordem obtido no item anterior e compare com o coeficiente de determinação simples obtido para um modelo de 1a. ordem para as mesmas variáveis. Qual o efeito da adição do termo quadrático no modelo para o coeficiente de determinação? O que isso significa?
+
+3. Conduza um teste de hipóteses para avaliar se o termo quadrático pode ser eliminado do modelo de regressão, para o nível de significância de 1%. Explicite as alternativas, a regra de decisão e a conclusão do teste.
+
+Agora, vamos construir modelos de regressão para a variável `InfectRisk` (resposta) como função das variáveis explicativas `LengthStay`, `Age`, `XrayRatio` e `MedSchool`.
+
+4. Ajuste um modelo de regressão 1a. ordem.
+
+5. Estime o efeito de `MedSchool` em `InfectRisk` utilizando um intervalo de confiança 98%. Interprete o resultado obtido.
+
+6. Sugeriu-se que o efeito de `MedSchool` em `InfectRisk` possa interagir com os efeitos das variáveis `Age` e `XrayRatio`. Adicione ao modelo anterior os termos de interação adequados, ajuste o modelo modificado e teste a significância dos termos de interação para $\alpha = 0.1$. Explicite as hipóteses consideradas, a regra de decisão e a conclusão do teste.
+
+Considere a construção de um modelo de regressão de 1a. ordem para a variável `LengthStay` como função de `Age`, `CultRatio`, `DailyCensys`, `Facilities` e `Region`.
+
+7. Teste se a variável `CultRatio` pode ser eliminada do modelo para o nível de significância de 5%.  Explicite as alternativas, a regra de decisão e a conclusão do teste.
+
+8. Examine se existe diferença nos efeitos na resposta `LengthStay` para hospitais em diferentes regiões. Que procedimento formal deve ser utilizado para avaliar essa questão?  
+
+----
+
+
+```{r}
+rm(list = ls())
+scenic <- read.table("data/SCENIC.txt")
+colnames(scenic) <- c("IDnumber","LengthStay","Age","InfectRisk","CultRatio","XrayRatio","NBeds","MedSchool","Region","DailyCensus","NNurses","Facilities")
+
+str(scenic)
+scenic$MedSchool[scenic$MedSchool == 2 ] <- 0
+scenic$IDnumber <- as.factor(scenic$IDnumber)
+scenic$MedSchool <- as.factor(scenic$MedSchool)
+scenic$Region <- as.factor(scenic$Region)
+
+attach(scenic)
+
+data1 <- data.frame(NNurses = NNurses, Facilities = Facilities)
+
+attach(data1)
+plot(data1)
+str(scenic)
+data1
+
+```
+O modelo da regressão me Segunda ordem para variável 'NNurses' como função de 'Facilities' pode ser descrito como:
+$E[NNurses] = \beta_0 + \beta_1 Facilities + \beta_2 Facilities^2$
+
+Vamos verificar a correlação entre a variável explicativa Facilities e Facilities^2. Caso a correlação seja elevada, é desejável centralizar a variável explicativa quantitativa, fazendo Facilities.c = Facilities - mean(Facilities):
+```{r}
+cor(Facilities,Facilities^2)
+```
+Essa correlação é elevada, portanto iremos centralizar a variável explicativa:
+
+```{r}
+plot(Facilities, Facilities^2)
+Facilities.c <- Facilities - mean(Facilities)
+plot(Facilities.c, Facilities.c^2)
+
+```
+
+Resultado Centralizado, agora verificaremos sua correlação resultante:
+```{r}
+cor(Facilities.c, Facilities.c^2)
+```
+A centralização foi adequada, uma vez que a correlação resultante atingiu patamares muito próximos de 0, indicando forte independência.
+
+Os resultados para o modelo não ajustado são:
+
+```{r}
+m.quant_original <- lm(NNurses ~ Facilities + I(Facilities^2))
+summary(m.quant_original)
+```
+
+O modelo ajustado, considerando a variável explicativa centralizada:
+
+```{r}
+m.quant <- lm(NNurses ~ Facilities.c + I(Facilities.c^2))
+summary(m.quant)
+
+```
+ Notamos que não houve alteração dos resíduos, nem da significância do modelo e dos parâmetros ao compararmos o modelo atual com o ajustado. Entretanto o resultado do p-valor corroboram para a necessidade de centralização (não passando no teste original para a variável explicativa).
+ Os valores do p valor para a estatística do modelo não ajustado são na ordem de $10^{-16}$ passando no teste.
+ 
+```{r}
+
+
+plot(fitted(m.quant), resid(m.quant))
+abline(h=0, lty="dashed")
+```
+
+Os resíduos não apresentam padrão característico.Concluímos que, pela análise, o modelo de segunda ordem ajustado parece explicar bem os dados.
+
+```{r}
+m.quant_1ordem <- lm(NNurses ~ Facilities )
+plot(m.quant_1ordem)
+summary(m.quant_1ordem)
+```
+Observa-se que o coeficiente de determinação no modelo de segunda ordem aumentou, de forma que o ajuste passou de 0.61 para 0.65 (note que o aumento foi pouco significativo).Com isso, podemos concluir que o modelo de segunda ordem é uma melhor representação que o de primeira ordem, uma vezes que 4% a mais da variável independente é explicado na resposta.
+
+
+```{r}
+anova(m.quant)
+```
+Analisando o p-valor resultante do teste-F podemos inferir que para um nível de significância de $\alpha = 0.01$, a hipótese nula é rejeitada. Então o coeficiente de Segunda ordem é significativo.
+
+### Segundo modelo:
+ 
+```{r}
+data2 <- data.frame(InfectRisk = InfectRisk, LengthStay = LengthStay, Age = Age, XrayRatio = XrayRatio, MedSchool = MedSchool)
+m.quant2 <- lm(InfectRisk ~ LengthStay + Age + XrayRatio + MedSchool)
+
+summary(m.quant2)
+
+plot(m.quant2)
+```
+
+```{r}
+confint.lm(m.quant2, level=0.98)
+
+```
+
+O valor absoluto do efeito de MedSchool é o maior dentre as outras variáveis explicativas, portanto para o intervalo de confiança de 98% grande parte dos dados de MedSchool são descritos pelo modelo.
+
+Será criado um modelo completo incluindo as interações de MedSchool, Age e XRayRatio:
+
+$E[InfectRisk] = \beta_0 + \beta_1 * MedSchool + \beta_2 * Age + \beta_3 * XRayRatio + \beta_4 * LenghtStay + \beta_{12} * Age * MedSchool + \beta_{13} * MedSchool * XRayRatio$ 
+
+```{r}
+m.all <- lm(InfectRisk ~ MedSchool + Age + XrayRatio + MedSchool * Age + MedSchool * XrayRatio)
+summary(m.all)
+
+```
+O modelo é significativo (estatística F), pois o valor 8.938 é maior que 5. O valor do coeficiente de determinação e do coeficiente de determinação ajustado diminuiram, indicando que o modelo ajustado não explica melhor a variável independente.
+
+```{r}
+anova(m.all)
+```
+Os resultados da ANOVA mostram que o termo de interação da variável categórica Age com o termo da variável quantitativa MedSchool não é significativo. Em contrapartida, o termo de interação da variável XrayRatio com MedSchool é significativo.
+
+Alternativamente, podemos chegar a semelhantes conclusões a partir da comparação dos dois modelos aninhados m.all e m.quant2, utilizando a abordagem o teste linear geral:
+
+```{r}
+anova(m.quant2, m.all, test="F")
+```
+
+No modelo completo, temos 1 parâmetro adicional (Df1), o que era esperado, uma vez que apenas XrayRatio possui uma interação significativa com MedSchool.
+
+Ao se gerar a tabela Anova, não foi obtido nenhum valor para o valor de F e o p-valor, por isso não é possível fazer nenhuma conclusão referente aos efeitos de interação entre variável quantitativa e categórica.
+
+Sendo assim, o modelo final obtido é dado por:
+
+```{r}
+m.quant2
+```
+
+### Modelo de LenghtSTay como função de Age, CultRatio, DailyCensys, Facilities e Region.
+
+```{r}
+data3 <- data.frame(LengthStay = LengthStay, Age = Age, CultRatio = CultRatio, DailyCensus = DailyCensus, Facilities = Facilities, Region = Region)
+
+data3_lm <- lm(LengthStay ~ Age + CultRatio + DailyCensus + Facilities + Region)
+
+summary(data3_lm)
+```
+
+Ao analisar o summary do modelo criado, percebemos que os valores t são similares. Para o coeficiente CultRatio, temos que o p-valor é de 0.5781%, menor que o nível de significância de 5%, rejeitando, assim, a hipótese nula, e concluindo que CultRatio é relevante, não podendo eliminá-lo.
+
+### Análise por região
+
+```{r}
+# regiao 1
+data4_region1 <- subset(data3, Region == 1)
+data4_region1_lm <- lm(LengthStay ~ Age + CultRatio + DailyCensus + Facilities, data = data4_region1)
+summary(data4_region1_lm)
+```
+
+```{r}
+# regiao 2
+data4_region2 <- subset(data3, Region == 2)
+data4_region2_lm <- lm(LengthStay ~ Age + CultRatio + DailyCensus + Facilities, data = data4_region2)
+summary(data4_region2_lm)
+```
+
+```{r}
+# regiao 3
+data4_region3 <- subset(data3, Region == 3)
+data4_region3_lm <- lm(LengthStay ~ Age + CultRatio + DailyCensus + Facilities, data = data4_region3)
+summary(data4_region3_lm)
+```
+
+```{r}
+# regiao 4
+data4_region4 <- subset(data3, Region == 4)
+data4_region4_lm <- lm(LengthStay ~ Age + CultRatio + DailyCensus + Facilities, data = data4_region4)
+summary(data4_region4_lm)
+```
+
+Para analisar se existe inferência nas resposta LenghtSTay para hospitais de diferentes regiões, o procedimento formal utilizado é comparando dos valores de MSE e Raj² para cada região. Os valores podem ser obtidos através do summary de cada modelo de regressão linear.
+
+MSE da região 1: 3.877,
+Raj² da região 1: 0.456
+
+MSE da região 2: 0.965,
+Raj² da região 2: 0.322
+
+MSE da região 3: 1.234,
+Raj² da região 3: 0.178
+
+MSE da região 4: 0.950,
+Raj² da região 4: 0.056 
+
+Assim, para menores valores de MSE e maiores valores de Raj² temos que há maiores efeitos positivos no modelo para a região.
