@@ -1,0 +1,452 @@
+---
+Encoding: UTF-8 Unicode
+title: "GED16/AO808: Análise de Regressão"
+subtitle: 'AULA07: Prática'
+author: "Professora: Denise B. Ferrari"
+date: "1o. semestre/2021" # <`r Sys.Date()`>
+output:
+  html_document:
+    theme: sand
+    df_print: paged
+    number_sections: FALSE  
+---
+```{r include = FALSE}
+library(tidyverse)
+knitr::opts_chunk$set(eval = TRUE, echo = TRUE)
+```
+
+----
+
+### Introdução
+
+"[Infecção hospitalar](https://www.prefeitura.sp.gov.br/cidade/secretarias/saude/vigilancia_em_saude/infeccao_hospitalar/index.php?p=6445) é uma infecção adquirida após a admissão do paciente na unidade hospitalar e pode se manifestar durante a internação ou após a alta. Pela sua gravidade e aumento do tempo de internação do paciente, é causa importante de morbidade e mortalidade, caracterizando-se como problema de saúde pública."
+
+Os dados disponíveis no arquivo `data/SCENIC.txt` foram coletados pelo CDC (US Center for Disease Control), no âmbito do [Projeto SCENIC](https://doi.org/10.1093/oxfordjournals.aje.a112928). O principal objetivo do projeto era determinar se programas de vigilância e controle foram capazes de reduzir as taxas de infecção hospitalar. Os dados referem-se a uma amostra de 113 hospitais selecionados a partir de um conjunto de 338 hospitais avaliados. Cada linha do conjunto de dados contém uma identificação (1-113) e fornece informação a respeito de 11 variáveis para um único hospital. Os dados apresentados referem-se ao período de 1975-1976.
+
+As 12 variáveis são:
+
+1. `IDnumber`: 1-113 (identificação do hospital)    
+2. `LengthStay`: período de internação médio de todos os pacientes no hospital (em dias)    
+3. `Age`: idade média dos pacientes (anos)   
+4. `InfectRisk`: risco de infecção, calculado como a probabilidade média estimada de contrair infecção no hospital (em %)   
+5. `CultRatio`: razão do número de culturas realizadas pelo número de pacientes sem sintomas de infecção hospitalar, vezes 100  
+6. `XrayRatio`: razão do número de raios-X realizados pelo número de pacientes sem sintomas de pneumonia, vezes 100  
+7. `NBeds`: número médio de leitos do hospital, durante o período avaliado  
+8. `MedSchool`: afiliação a alguma Escola de Medicina (1=Sim, 2=Não)  
+9. `Region`: região geográfica (1=NE, 2=NC, 3=S, 4=W)  
+10. `DailyCensus`: número médio de pacientes no hospital por dia, durante o período avaliado  
+11. `NNurses`: número médio de enfermeiros no hospital  
+12. `Facilities`: percentual de 35 serviços providos pelo hospital
+
+Acredita-se que o período médio de internação de um paciente `LengthStay` (variável de resposta) possa ser previsto a partir do risco de infecção hospitalar, bem como outras características do hospital e de procedimentos de rotina realizados.
+
+----
+
+### Análise Exploratória de Dados
+
+Conduza a análise exploratória da massa de dados `SCENIC`, a fim de compreender suas características principais.   
+
+
+```{r Análise Exploratória}
+rm(list=ls())
+scenic <- read.table("data/SCENIC.txt", header = FALSE)
+
+str(scenic)
+colnames(scenic) <- c("IDnumber","LengthStay","Age","InfectRisk","CultRatio","XrayRatio","NBeds","MedSchool","Region","DailyCensus","NNurses","Facilities")
+
+scenic$MedSchool[scenic$MedSchool == 2 ] <- 0
+
+names(scenic)
+summary(scenic)
+```
+
+Transformação do tipo de variáveis
+
+```{r}
+scenic$IDnumber <- as.factor(scenic$IDnumber)
+scenic$MedSchool <- as.factor(scenic$MedSchool)
+scenic$Region <- as.factor(scenic$Region)
+
+```
+
+Para utilizar os nomes das variáveis diretamente
+
+```{r}
+attach(scenic)
+
+```
+
+Boxplot e histograma com linha de densidade estimada da variável de resposta.
+
+```{r}
+boxplot(LengthStay, horizontal = TRUE)
+
+hist(LengthStay, freq = FALSE, breaks = "FD", main = "")
+lines(density(LengthStay), col="blue", lwd=3)
+
+#matriz de gráficos de dispersão
+plot(scenic[, -c(1,8,9)])
+
+#carregar biblioteca para fazer matriz de correlação
+library(corrplot)
+
+res <- cor(scenic[, -c(1,8,9)])
+round(res,2)
+corrplot(res, method = "circle", order = "hclust", sig.level = 0.01, insig = "blank")
+```
+
+A matriz obtida sugere correlação entre algumas variáveis, cujos diagramas de dispersão serão exibidos a seguir. Além disso, Scatterplot para variável de resposta em função das explicativas filtrado por categóricas.
+
+```{r}
+library(car)
+
+  #MedSchool
+scatterplot(LengthStay ~ DailyCensus|MedSchool, data = scenic)
+scatterplot(LengthStay ~ InfectRisk|MedSchool, data = scenic)
+scatterplot(LengthStay ~ Facilities|MedSchool, data = scenic)
+
+  #Region
+scatterplot(LengthStay ~ CultRatio|Region, data = scenic)
+scatterplot(LengthStay ~ XrayRatio|Region, data = scenic)
+scatterplot(LengthStay ~ Facilities|Region, data = scenic)
+scatterplot(LengthStay ~ InfectRisk|Region, data = scenic)
+```
+
+```{r}
+#Construção de nova base de dados
+detach(scenic)
+scenic <- scenic[, -c(1)]
+attach(scenic)
+data_rls <- data.frame(LengthStay = LengthStay, InfectRisk = InfectRisk, Facilities = Facilities, XrayRatio = XrayRatio, Age = Age, CultRatio =  CultRatio, NBeds =  NBeds, MedSchool = MedSchool, Region = Region, DailyCensus = DailyCensus, NNurses = NNurses)
+
+summary(data_rls)
+
+```
+
+
+Note que as variáveis LengthStay está relacionada com InfectRisk e XrayRatio, contudo não linear. Portanto vamos analisar os plots de maneira separada para decidir se cabe a criação de um modelo de ordem superior para analisar a significância da variável na resposta.
+```{r }
+plot(LengthStay ~ InfectRisk)
+plot(LengthStay ~ XrayRatio)
+
+testIR_lm <- lm(LengthStay ~ I(InfectRisk*InfectRisk), data = data_rls)
+testXR_lm <- lm(LengthStay ~ I(XrayRatio*XrayRatio), data = data_rls)
+
+summary(testIR_lm)
+summary(testXR_lm)
+
+```
+Nota-se que apesar dos coeficientes angulares dos modelos e os valores da estatística t serem significativos em ambos os casos, o valor de Raj^2 não foi tão expressivo. Contudo seguiremos com mais variáveis e deixaremos uma possível exclusão no método de Eliminação Regressiva.
+
+Vamos iniciar utilizando o método de Eliminação Regressiva (Backward Elimination). O procedimento começa com o ajuste do modelo completo e, a cada etapa, eliminamos a variável explicativa com maior valor-p acima do nível de significância 0.01:
+
+```{r }
+
+# modelo completo
+m.all <- lm(LengthStay ~. +I(InfectRisk*InfectRisk)+I(XrayRatio*XrayRatio)  , data = data_rls)
+summary(m.all)
+```
+
+Vamos iniciar pela variável MedSchool, que apresenta maior valor-p (0.797), de acordo com o resumo da regressão para o modelo completo.
+
+```{r}
+
+m.be <- update(m.all, . ~. - MedSchool)
+summary(m.be)
+
+#A próxima variável a ser eliminada é CultRatio
+m.be <- update(m.be, . ~. - CultRatio)
+summary(m.be)
+
+#A próxima variável a ser eliminada é Facilities
+m.be <- update(m.be, . ~. - Facilities)
+summary(m.be)
+
+#A próxima variável a ser eliminada é XrayRatio
+m.be <- update(m.be, . ~. - XrayRatio)
+summary(m.be)
+
+#A próxima variável a ser eliminada é InfectRisk
+m.be <- update(m.be, . ~. - InfectRisk)
+summary(m.be)
+
+#A próxima variável a ser eliminada é NBeds
+m.be <- update(m.be, . ~. - NBeds)
+summary(m.be)
+
+#A próxima variável a ser eliminada é XrayRatio*XrayRatio
+m.be <- update(m.be, . ~. - I(XrayRatio*XrayRatio))
+summary(m.be)
+
+#A próxima variável a ser eliminada é Age
+m.be <- update(m.be, . ~. - Age)
+summary(m.be)
+```
+
+Nesse ponto, todas as variáveis possuem valor-p menor que 0.01, então paramos com a iteração.Note que o coeficiente de determinação ajustado sofreu apenas uma pequena redução em comparação com aquele obtido para o modelo completo. Para o método de Eliminação Regressiva, as variáveis que devem ser usadas no modelo para LengthStay são Region, DailyCensus, NNurses e InfectRisk * InfectRisk e pelo Princípio da Hierarquia, como a variável InfectRisk * InfectRisk se manteve no modelo, devemos retornar com a variável InfectRisk.
+
+Vamos proceder agora com o Método Gradativo de Seleção Sequencial (Stepwise Regression), que combina os procedimentos de Eliminação Regressiva e Seleção Progressiva:
+```{r }
+# Stepwise Regression
+library(leaps)
+```
+
+```{r}
+
+m.sr <- regsubsets(LengthStay ~. +I(InfectRisk*InfectRisk)+I(XrayRatio*XrayRatio), data = data_rls, nvmax = 13,
+                     method = "seqrep")
+summary(m.sr)
+```
+
+Consideramos a inclusão de 1 até o total das 11 variáveis explicativas disponíveis. Em cada um desses casos, o resumo identifica as variáveis incluídas no “melhor” sub-modelo de cada tamanho. No entanto, não temos uma medida da qualidade dos modelos. Precisamos comparar o desempenho dos diferentes modelos obtidos. Para isso, vamos utilizar validação cruzada k-fold (leave-k-out cross-validation):
+
+```{r }
+
+# Carrega pacote necessário
+library(caret)
+
+set.seed(111)
+
+train.set <- trainControl(method = "cv", number = 10)
+# Calibração do modelo
+m.step <- train(LengthStay ~. +I(InfectRisk*InfectRisk)+I(XrayRatio*XrayRatio), data = data_rls, 
+                method = "leapBackward", 
+                tuneGrid = data.frame(nvmax = 1:13),
+                trControl = train.set)
+(results.sr <- m.step$results)
+```
+
+ Podemos, ainda, selecionar o modelo com melhor ajuste (segundo as métricas consideradas) da seguinte maneira:
+```{r }
+m.step$bestTune
+```
+
+Poderíamos, também, escolher o modelo mais reduzido que apresentou melhora comparado aos outros (maior redução no RMSE e MAE e maior aumento no R2). Para visualizar melhor, faremos uma série de plots
+
+```{r Continuação stepwise}
+# Visualização
+par(mfrow=c(3,1))
+plot(RMSE ~ nvmax, data = results.sr, type = "l", col = 2, lwd = 2)
+plot(Rsquared ~ nvmax, data = results.sr, type = "l", col = 2, lwd = 2)
+plot(MAE ~ nvmax, data = results.sr, type = "l", col = 2, lwd = 2)
+```
+
+Nota-se que a adição de 8 variáveis possui o maior impacto na queda de RMSE e MAE e no aumento de Raj^2. As variáveis explicativas são Age, Region, DailyCensus, NNurses, InfectRisk^2 e XrayRatio^2. Vamos considerar como final, o modelo com 8 variáveis explicativas(incluindo as region dummy), pois nota-se que a adição de mais variáveis além de 8 não altera a qualidade do modelo, inclusive a adição de mais de 10 variáveis piora o modelo. Optou-se pelo "melhor" modelo com menor custo. Os coeficientes estimados para o modelo final (8) podem ser recuperados da seguinte maneira:
+
+```{r }
+coef(m.step$finalModel, 8)
+
+
+
+
+```
+
+### PARTE 2
+
+Faremos a all-possible-regressions para identificar um conjunto de variáveis explicativas para o modelo de regressão para a resposta LengthStay. Faremos o modelo completo m.all para aplicar o método AIC. 
+
+```{r all possible regressions}
+
+m.aic <- step(m.all)
+```
+O teste indica que o melhor modelo deve ser feito usando as seguintes variáveis: NBeds, I(XrayRatio * XrayRatio), Age, NNuurses, DailyCensus, Region e I(InfectRisk * InfectRisk). Seguiremos usando o critério para decisão. Poderíamos realizar o mesmo teste da seguinte maneira:
+```{r }
+
+library(MASS)
+
+m.aic2 <- stepAIC(m.all, direction = "both", trace = FALSE)
+summary(m.aic2)
+```
+Note que o resultado apresentou as mesmas 7 variáveis(incluindo as dummy region). 
+
+ Cp de Mallows e R2aj
+```{r }
+library(leaps)
+
+data_rls_maisq <- cbind(data_rls, IR2 = InfectRisk*InfectRisk, XR2 = XrayRatio*XrayRatio)
+data_rls_maisq <- data_rls_maisq[-c(47,112), ]
+attach(data_rls_maisq)
+m.crit <- regsubsets(LengthStay ~., data = na.omit(data_rls_maisq), nvmax = 13,
+                     method = "exhaustive")
+(results.crit <- summary(m.crit))
+
+n.var <- 1:13 # numero de var. explicativas
+plot(n.var + 1, results.crit$cp, xlab = "no. parâmetros", ylab = "Cp de Mallows")
+abline(0,1, col = "red")
+
+
+```
+
+Queremos modelos que estejam abaixo da linha $C_p=p+1$, em que p é o no. de variáveis explicativas no modelo. Neste caso, o melhor modelo é o que inclui 9 variáveis explicativas, contando as Regions dummy.
+As variáveis são Age, NBeds, Region, DailyCensus, NNurses, IR2 e XR2.
+
+Vejamos os resultados utilizando como critério de avaliação o coeficiente de determinação ajustado:
+
+
+```{r}
+
+n.var <- 1:13 # numero de var. explicativas
+plot(n.var + 1, results.crit$adjr2, 
+     xlab = "no. parâmetros", 
+     ylab = "R2 ajustado", type="b")
+```
+
+Percebe-se que nesse caso, o melhor modelo também inclui 9 variáveis(incluindo as Regions dummy).
+Nota-se que consistentemente as variáveis Region, DailyCensus, NNurses, IR2(a qual pelo principio da hierarquia requer IR no modelo) foram selecionadas por todos os métodos. Além disso, tem-se que Age, XR2 figuram nos outros 3 métodos sugeridos. Portanto, a fim de analisar a interação dessas variáveis (Age e XR2), será construído um modelo sugerido pelo Stepwise que inclui as variáveis que aparecem em todos métodos além de Age e XR2.
+
+Partiremos agora para a construção e análise do modelo com essas variáveis selecionadas para a resposta `LengthStay`:
+
+Vamos construir um modelo de 2a. ordem (resposta quadrática) para a variável LengthStay como função de variáveis explicativas, mas com atenção especial para IR e XR que tem termos quadráticos.
+
+
+Vamos verificar a correlação entre a variável explicativa IR e IR2 e XR e XR2. Caso a correlação seja elevada, é desejável centralizar a variável explicativa quantitativa, fazendo InfectRisk.c = InfectRisk - mean(InfectRisk) e XrayRatio.c = XrayRatio - mean(XrayRatio).
+
+```{r}
+cor(InfectRisk, IR2)
+cor(XrayRatio, XR2)
+```
+A correlação foi elevada, portanto será feita a centralização em torno da média.
+
+```{r}
+InfectRisk.c <- InfectRisk - mean(InfectRisk)
+XrayRatio.c <- XrayRatio - mean(XrayRatio)
+
+```
+
+```{r}
+data_maisq_cent <- data.frame(LengthStay = LengthStay, InfectRisk.c = InfectRisk.c, Facilities = Facilities, XrayRatio.c = XrayRatio.c, Age = Age, CultRatio =  CultRatio, NBeds =  NBeds, MedSchool = MedSchool, Region = Region, DailyCensus = DailyCensus, NNurses = NNurses, IR2.c = InfectRisk.c*InfectRisk.c, XR2.c = XrayRatio.c*XrayRatio.c )
+
+attach(data_maisq_cent)
+
+modelo_rlm <- lm(LengthStay ~ Age + DailyCensus + NNurses + IR2.c + XR2.c + InfectRisk.c + XrayRatio.c, data  = data_maisq_cent)
+
+summary(modelo_rlm)
+```
+
+A abordagem utilizada na construção do modelo consistirá na criação de um modelo inicial incluindo apenas as variáveis quantitativas, já considerando a centralização das variáveis InfectRisk e XrayRatio. Em seguida, após a análise deste modelo e remoção de eventuais variáveis, serão incluídos e analisados os termos de interação entre as variáveis quantitativas e a variável categórica Region.
+
+```{r}
+
+plot(modelo_rlm)
+
+```
+
+Devido à baixa significância de XR2 e de NNurses no modelo feito, e para simplificação, XR2 e NNurses será removido
+
+```{r}
+modelo_rlm2 <- lm(LengthStay ~ Age + DailyCensus + IR2.c + InfectRisk.c + XrayRatio.c, data  = data_maisq_cent)
+summary(modelo_rlm2)
+
+plot(modelo_rlm2)
+```
+
+Em seguida analisaremos se há indícios de multicolinearidade entre as variáveis explicativas.
+
+```{r}
+data_multicol <- data.frame(LengthStay = LengthStay, Age = Age, DailyCensus = DailyCensus, IR2.c = IR2.c, InfectRisk.c = InfectRisk.c, XrayRatio.c = XrayRatio.c)
+
+attach(data_multicol)
+
+modelo_rlm_multicol <- lm(LengthStay ~ Age + DailyCensus + IR2.c + InfectRisk.c + XrayRatio.c, data  = data_multicol)
+summary(modelo_rlm_multicol)
+
+plot(modelo_rlm_multicol)
+```
+
+```{r}
+cor(data_multicol)
+corrplot(cor(data_multicol), method = "circle", order = "hclust", sig.level = 0.01, insig = "blank")
+```
+
+```{r}
+vif(modelo_rlm_multicol)
+```
+
+Uma observação inicial dos gráficos de dispersão obtidos sugere que não há aparente relação linear entre as variáveis explicativas. Em seguida, a matriz de correlação corrobora essa hipótese, uma vez que não apresentou nenhum valor próximo de 1 (o valor que mais se aproxima de 1 foi 0.43755783 para InfectRisk.c versus XrayRatio.c). Em seguida, fez-se o VIF para o modelo criado. Para esse teste, temos que valores acima de 5 indicam sérios efeitos de multicolinearidade, sendo que o coeficiente de regressão para a variável não está sendo estimado de maneira apropriada. Para o modelo obtido foram encontrados valores próximos de 1, indicando que não há aumento relevante da variância dos coeficientes da regressão devido à presença de multicolinearidade. Dessa maneira, os três resultados obtidos indicam que não há efeitos sérios de multicolinearidade presentes no modelo construido, de modo que não serão considerados os termos de interação entre as variáveis quantitativas.
+
+Será adicionada a variável categórica Region ao modelo.
+
+```{r}
+modelo.quali <- lm(LengthStay ~ Age + Region + DailyCensus + IR2.c + InfectRisk.c + XrayRatio.c)
+summary(modelo.quali)
+
+plot(modelo.quali)
+```
+
+Pelo p-valor ter diminuído e o valor de R² ajustado ter aumentado em relação ao modelo sem a variável categórica Region, então o acréscimo de tal variável é relevante ao nosso modelo.
+
+Agora, analisaremos as interação entre os termos da variável categórica e as variáveis quantitativas.
+
+```{r}
+modelo_rlm_cat <- lm(LengthStay ~ Age + Region + DailyCensus + IR2.c + InfectRisk.c + XrayRatio.c + Region*Age + Region*DailyCensus + Region*IR2.c + (Region*InfectRisk.c) + (Region*XrayRatio.c), data  = data_maisq_cent)
+summary(modelo_rlm_cat)
+
+anova(modelo_rlm_cat)
+
+```
+
+Olhando a coluna do valor F, podemos perceber que as interações de Region com as variáveis quantitativas possuem um valor F pequeno, indicando que podemos descartá-las. Isso também pode ser verificado pela comparação entre os dois modelos a seguir.
+
+```{r}
+anova(modelo.quali, modelo_rlm_cat, test="F")
+
+modelo.quali
+```
+
+Analisando os resíduos do modelo, obtemos:
+
+```{r}
+summary(modelo.quali)
+```
+
+Aqui podemos verificar que o p-valor do modelo é baixo e o R² ajustado, como vimos no passo a passo, apenas aumentou com a adição das variáveis explciativas.
+
+```{r}
+plot(modelo.quali)
+```
+
+O gráfico de resíduos possui uma leve inclinação em relação à horizontal. Assim, realizaremos o teste de Durbin-Watson.
+
+```{r}
+library(lmtest)
+
+dwtest(modelo.quali, alternative = "two.sided")
+
+```
+
+Portanto, devido aos valores-p encontrados, aceita-se a hipótese nula, ou seja, sugere-se que os erros não são correlacionados.
+
+E realizaremos também o teste de Shapiro-Wilk.
+
+```{r}
+resid_rls_pad_ir <- rstandard(modelo.quali)
+shapiro.test(resid_rls_pad_ir)
+```
+
+O valor-p do teste nos leva a aceitar a hipótese nula e concluir que os erros são normalmente distribuídos. Tais resultados indicam que não é necessário realizar transformações e nem realizar outros tipos de regressão especial. A leve inclinação no gráfico de resíduos provavelmente está relacionada ao fato de que os termos de interação entre variáveis foram considerados desprezíveis, contudo ainda existe uma pequena influência que pode ser responsável.
+
+# Conclusão
+
+A base de dados foi inicialmente submetida a uma análise exploratória preliminar e em seguida aplicados os métodos de seleção de variáveis para escolha do modelo, sendo escolhido o modelo proposto pelo método Stepwise Regression, pois apresentou resultados coerentes com os demais métodos. Vale ressaltar que foi incluída um termo de segunda ordem nessa etapa do processo, consistindo de InfectRisk².
+
+Em seguida, foi construído um modelo com as variáveis identificadas, partindo-se de um modelo inicial com apenas variáveis quantitativas, no qual foi discutido e descartado a possível existência de multicolinearidade entre elas. Após isso, adicionou-se a variável categórica e analisou-se a sua influência no modelo, bem como termos de interação entre ela e as quantitativas. Após descartado os coeficientes não significativos, obtemos um modelo final para explicar a variável LenghtStay que consiste das variáveis explicativas Age, Region, DailyCensus, IR2.c, InfectRisk.c, XrayRatio.c, dado por:
+
+$E[LenghtStay]=β_0+β_1*Age+β_2*Region+β_3*DailyCensus+β_4*IR2.c+β_5*InfectRisk.c+β_6*XrayRatio.c$
+
+Dado que LenghtStay é o período de internação médio de todos os pacientes no hospital (em dias), podemos concluir que tal variável pode ser explicado por Age (que é a idade média dos pacientes), Region (região geográfica), DailyCensus (número médio de pacientes no hospital por dia, durante o período avaliado), XrayRatio (razão do número de raios-X realizados pelo número de pacientes sem sintomas de pneumonia), InfectRisk (risco de infecção, calculado como a probabilidade média estimada de contrair infecção no hospital e InfectRisk². Note que esse modelo é linear para todas as variáveis exceto InfectRisk. Algumas considerações importantes podem ser feitos com isso: o modelo obtido possui grau polinomial de baixa ordem, de modo que não há ruídos aletórios sendo modelados (fenômeno de Rudge). Além disso é importante ressaltar a característica da interação, uma vez que o efeito da variável InfectRisk na resposta depende dessa variável.
+
+$\partial{E[Y]}/\partial{(InfectRisk.c)} = β_5 + 2β_4*InfectRisk.c$
+
+Ademais, para o modelo polinomial ser utilizado para inferências ou testes de hipóteses é muito importante que seja feito dentro do escopo, de modo que esse modelo não permita extrapolações. Com isso, nota-se que essa variável é importante na previsão do período médio de internação de um paciente LengthStay. Assim, conclui-se que programas de vigilância que conseguem controlar o risco de infecção impactam o período médio de internação.
+
+Os coeficientes R² e o R² ajustado para o modelo não são unitários, de modo que essas variáveis não explicam com totalidade a variável de resposta LenghtStay. Contudo, durante a seleçao de variáveis percebe-se que a inclusão de outras variáveis não apresenta melhoras significativas nesse aspecto. Além disso, o modelo obtido não apresentou indícios de problemas como multicolinearidade, dependências ou heterocedasticidade. DEssa forma, é satisfatório a utilização desse modelo para explicar variações da variável LenghtStay. Por exemplo, podemos utilizar o modelo para verificar a inferência sobre a resposta esperada, desejando estimar o LenghtStay para Age = 50.9, Region = 2, DailyCensus = 147, InfectRisk.c = 0.77837838, InfectRisk² = 6.058729e-01 e XrayRatio = 15.7522523, como mostrado abaixo. Note que o ponto utilizado está dentro do escopo do modelo, coerente com a teoria.
+
+```{r}
+
+XH <- data.frame(Age = 50.9, Region = '2', DailyCensus = 147, InfectRisk.c = 0.77837838, IR2.c = 6.058729e-01, XrayRatio.c = 15.7522523)
+predict.lm(modelo.quali, newdata = XH, interval = "prediction", level = 0.95)
+```
+
+Concluímos com 95% de confiança que o período de internação médio para Age = 50.9, Region = 2, DailyCensus = 147, InfectRisk.c = 0.77837838, InfectRisk² = 6.058729e-01 e XrayRatio = 15.7522523 deve estar entre 7.817 e 11.814 dias. Dependendo do nível da precisão requerida, o intervalo pode ser adequado para a estimativa. Caso seja necessário um intervalo menor o modelo precisaria de ajustes.
+
+----
